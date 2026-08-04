@@ -1,7 +1,8 @@
 const app = {
     config: {
-        googleClientId: "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com", 
-        gasWebAppUrl: "YOUR_GAS_WEB_APP_URL" 
+        googleClientId: "521024868399-fi9gu0o584q1r61ckk9cqtbjcsiceos6.apps.googleusercontent.com
+", 
+        gasWebAppUrl: "https://script.google.com/macros/s/AKfycbwcik08HNi7aKnWzHvvcjvZHiowP7524juHA81cd4ItXvbgi9puQu1YESwaQOl2o5oN/exec" 
     },
 
     state: {
