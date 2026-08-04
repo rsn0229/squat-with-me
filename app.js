@@ -32,7 +32,7 @@ const app = {
         tempMotionHandler: null,
         
         images: JSON.parse(localStorage.getItem('swm_images') || '{"main":"","workout":"","finish":""}'),
-        colors: JSON.parse(localStorage.getItem('swm_colors') || '{"bg":"#f5f5f5","box":"#ffffff","title":"#61b8f2","squat":"#61b8f2","plank":"#fff1a8","calendar":"#3b82f6","element":"#ffffff"}'),
+        colors: JSON.parse(localStorage.getItem('swm_colors') || '{"bg":"#f5f5f5","box":"#ffffff","title":"#61b8f2","squat":"#fff1a8","plank":"#85c3ed","calendar":"#3b82f6","element":"#ffffff"}'),
         palette: JSON.parse(localStorage.getItem('swm_palette') || '[]'),
         quotes: JSON.parse(localStorage.getItem('swm_quotes') || '{"main":["오늘도 화이팅!"],"start":["자, 시작해보자고! 🔥"],"cheer":["자세 유지해!","조금만 더! 💦"],"finish":["고생했어! 최고야! ✨"]}'),
         
