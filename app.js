@@ -653,7 +653,6 @@ const app = {
         document.getElementById('current-set').innerText = this.state.currentSet;
     },
 
-    // 💡 센서 민감도와 디바운스(Debounce) 적용
     initSquatSensor() {
         this.state.isWorkingOut = true;
         let isDown = false;
