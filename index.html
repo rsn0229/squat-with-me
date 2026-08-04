@@ -229,7 +229,8 @@
             </div>
             
             <div class="modal-tabs">
-                <button class="tab-btn active" onclick="app.switchTab('tab-name')">이름</button>
+                <!-- 💡 탭 이름이 '이름'에서 '기본'으로 변경되었습니다 -->
+                <button class="tab-btn active" onclick="app.switchTab('tab-name')">기본</button>
                 <button class="tab-btn" onclick="app.switchTab('tab-img')">이미지</button>
                 <button class="tab-btn" onclick="app.switchTab('tab-color')">색상</button>
                 <button class="tab-btn" onclick="app.switchTab('tab-quote')">대사</button>
@@ -239,10 +240,13 @@
             <div id="tab-name" class="tab-panel active">
                 <div class="form-group">
                     <label>최애 이름 변경</label>
-                    <div style="display:flex; gap:10px;">
-                        <input type="text" id="input-oshi-name" class="brutal-input w-100" placeholder="예: ME!">
-                        <button class="brutal-btn btn-squat" style="padding: 8px 12px;" onclick="app.saveOshiName()">저장</button>
-                    </div>
+                    <input type="text" id="input-oshi-name" class="brutal-input w-100" placeholder="예: ME!" style="margin-bottom: 15px;">
+                    
+                    <!-- 💡 키 입력 필드 추가 (센서 자동 보정용) -->
+                    <label>내 키 (cm) - <span style="font-size: 0.85rem; color: #888;">스쿼트 센서 보정용</span></label>
+                    <input type="number" id="input-user-height" class="brutal-input w-100" placeholder="예: 165" style="margin-bottom: 15px;">
+                    
+                    <button class="brutal-btn btn-squat w-100" style="padding: 8px 12px;" onclick="app.saveBasicSettings()">저장하기</button>
                 </div>
             </div>
 
@@ -298,7 +302,6 @@
                 </div>
             </div>
             
-            <!-- 💡 추가됨: 동기화(백업/불러오기) 컨트롤 UI -->
             <div id="tab-sync" class="tab-panel hidden">
                 <div class="form-group text-center">
                     <label>클라우드 동기화 (무료)</label>
@@ -313,7 +316,6 @@
                         <div id="google-user-name" style="font-weight: bold;"></div>
                         <div id="google-user-email" style="font-size: 0.85rem; opacity: 0.8; margin-bottom: 15px;"></div>
                         
-                        <!-- 동기화 액션 버튼 -->
                         <div style="display:flex; gap:10px; margin-bottom: 10px;">
                             <button class="brutal-btn btn-squat w-100" style="padding:8px;" onclick="app.backupToCloud()">☁️ 백업하기</button>
                             <button class="brutal-btn btn-plank w-100" style="padding:8px;" onclick="app.restoreFromCloud()">⬇️ 불러오기</button>
