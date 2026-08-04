@@ -47,6 +47,7 @@ body {
     background-color: var(--bg-color);
     color: var(--bg-text); 
     display: flex; flex-direction: column; align-items: center;
+    /* 💡 dvh 적용 및 overflow 속성 추가로 화면 잘림 방지 */
     height: 100vh; height: 100dvh; 
     overflow: hidden; position: relative;
     transition: background-color 0.3s, color 0.3s;
@@ -71,20 +72,20 @@ body {
 .icon-btn { background: var(--element-bg); border: var(--border-thick); box-shadow: 2px 2px 0px var(--black); border-radius: 50%; width: 45px; height: 45px; font-size: 1.4rem; cursor: pointer; color: var(--element-text); }
 .icon-btn:active { transform: translate(2px, 2px); box-shadow: 0px 0px 0px var(--black); }
 
-/* 💡 물리적 하단 여백 추가 (소프트키 가림 완벽 방지) */
+/* 💡 화면이 너무 좁을 경우 줄어들 수 있도록 개선, 하단 소프트키 안전영역 확보 */
 .view {
     width: 100%; max-width: 450px; 
-    height: 100vh; height: 100dvh; 
+    height: 100%; 
     position: absolute; top: 0;
-    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
-    padding: 20px; padding-top: 80px; 
-    padding-bottom: max(40px, env(safe-area-inset-bottom));
+    display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+    padding: 20px; padding-top: 65px; 
+    padding-bottom: calc(15px + max(15px, env(safe-area-inset-bottom)));
     opacity: 0; visibility: hidden; pointer-events: none;
     transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 .view.active { opacity: 1; visibility: visible; pointer-events: auto; z-index: 10; }
 
-.content-wrapper { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; }
+.content-wrapper { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; min-height: 0; }
 
 .brutal-box { background-color: var(--box-bg); color: var(--box-text); border: var(--border-thick); box-shadow: var(--box-shadow); border-radius: 16px; padding: 20px; transition: background-color 0.3s, color 0.3s; }
 .brutal-btn {
@@ -104,38 +105,47 @@ body {
 
 .brutal-input { background: var(--element-bg); color: var(--element-text); border: var(--border-thick); padding: 10px; border-radius: 8px; font-size: 1.2rem; }
 
-.counter-group { margin-bottom: 20px; }
-.counter-label { font-size: 1.3rem; margin-bottom: 8px; color: var(--title-color); text-align: center; }
+.counter-group { margin-bottom: 15px; }
+.counter-label { font-size: 1.2rem; margin-bottom: 5px; color: var(--title-color); text-align: center; }
 .brutal-counter { display: flex; justify-content: space-between; align-items: center; background: var(--box-bg); border: var(--border-thick); box-shadow: var(--box-shadow); border-radius: 12px; overflow: hidden; }
 .counter-btn { background: var(--element-bg); color: var(--element-text); border: none; width: 50px; height: 50px; font-size: 1.8rem; cursor: pointer; }
 .counter-btn:active { opacity: 0.7; }
 .counter-val { font-size: 2rem; flex: 1; text-align: center; border-left: var(--border-thick); border-right: var(--border-thick); background: var(--box-bg); color: var(--title-color); }
 
-.character-area { display: flex; flex-direction: column; align-items: center; margin-bottom: 30px; position: relative; }
-.character-img { width: 280px; height: 280px; object-fit: contain; filter: drop-shadow(3px 3px 0px var(--black)); border-radius: 20px; }
+/* 💡 이미지 크기를 줄여 버튼이 보장되게 함 */
+.character-area { display: flex; flex-direction: column; align-items: center; margin-bottom: 15px; position: relative; width: 100%; }
+.character-img { 
+    width: 280px; max-width: 100%; 
+    height: auto; max-height: 25vh; /* 30vh에서 25vh로 축소 */
+    object-fit: contain; filter: drop-shadow(3px 3px 0px var(--black)); border-radius: 20px; 
+}
 .float-anim { animation: floatHero 2.5s ease-in-out infinite; }
 @keyframes floatHero { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
 
-.speech-bubble { background: var(--box-bg); color: var(--box-text); padding: 12px 20px; border-radius: 16px; font-size: 1.3rem; margin-bottom: 25px; position: relative; user-select: none; text-align: center; line-height: 1.4; transition: background-color 0.3s, color 0.3s; }
+.speech-bubble { background: var(--box-bg); color: var(--box-text); padding: 12px 20px; border-radius: 16px; font-size: 1.3rem; margin-bottom: 20px; position: relative; user-select: none; text-align: center; line-height: 1.4; transition: background-color 0.3s, color 0.3s; }
 .speech-bubble::after { content: ''; position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%); border-width: 12px 12px 0; border-style: solid; border-color: var(--black) transparent transparent transparent; }
 .speech-bubble::before { content: ''; position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); border-width: 10px 10px 0; border-style: solid; border-color: var(--box-bg) transparent transparent transparent; z-index: 1; transition: border-color 0.3s;}
 
-.workout-dashboard { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 25px; position: relative; text-align: center; cursor: default; }
+/* 💡 대시보드 내부 여백/패딩을 축소하여 세로 공간 절약 */
+.workout-dashboard { 
+    width: 100%; display: flex; flex-direction: column; align-items: center; 
+    gap: 5px; margin-bottom: 10px; padding: 15px;
+    position: relative; text-align: center; cursor: default; 
+}
 .speech-bubble-large::after { content: ''; position: absolute; bottom: -15px; left: 50%; transform: translateX(-50%); border-width: 15px 15px 0; border-style: solid; border-color: var(--black) transparent transparent transparent; }
 .speech-bubble-large::before { content: ''; position: absolute; bottom: -11px; left: 50%; transform: translateX(-50%); border-width: 13px 13px 0; border-style: solid; border-color: var(--box-bg) transparent transparent transparent; z-index: 1; transition: border-color 0.3s; }
 
 .dash-count { display: flex; align-items: baseline; justify-content: center; gap: 8px; }
-.text-huge { font-size: 5.5rem; color: var(--title-color); line-height: 1; }
-.text-medium { font-size: 1.6rem; color: var(--box-text); }
-.dash-set { font-size: 1.3rem; color: var(--box-text); background: rgba(0,0,0,0.08); padding: 5px 15px; border-radius: 20px; }
-.dash-quote { font-size: 1.4rem; color: var(--box-text); margin-top: 5px; font-weight: bold; min-height: 50px; display: flex; align-items: center; justify-content: center; text-align: center; width: 100%; word-break: keep-all; }
+.text-huge { font-size: 3.5rem; color: var(--title-color); line-height: 1; } /* 크기 약간 줄임 */
+.text-medium { font-size: 1.3rem; color: var(--box-text); }
+.dash-set { font-size: 1.1rem; color: var(--box-text); background: rgba(0,0,0,0.08); padding: 5px 15px; border-radius: 20px; margin-bottom: 5px; }
+.dash-quote { font-size: 1.1rem; color: var(--box-text); margin-top: 0; font-weight: bold; min-height: 35px; display: flex; align-items: center; justify-content: center; text-align: center; width: 100%; word-break: keep-all; }
 
-/* 💡 버튼 추가 여백 */
-.menu-buttons { display: flex; gap: 15px; width: 100%; margin-top: auto; margin-bottom: 10px; }
-.action-buttons { display: flex; gap: 10px; width: 100%; margin-top: auto; margin-bottom: 10px; }
+.menu-buttons { display: flex; gap: 15px; width: 100%; margin-top: 10px; }
+.action-buttons { display: flex; gap: 10px; width: 100%; margin-top: 10px; }
 .w-100 { width: 100%; }
 
-.title-color { color: var(--title-color); font-size: 1.5rem; margin-bottom: 15px; transition: color 0.3s; }
+.title-color { color: var(--title-color); font-size: 1.5rem; margin-bottom: 5px; transition: color 0.3s; }
 .text-center { text-align: center; }
 .setup-box { width: 100%; }
 
@@ -205,4 +215,4 @@ body {
 .quote-del { background: #ff9999; color: #111; border: 2px solid var(--black); border-radius: 4px; padding: 2px 6px; cursor: pointer; }
 
 .toast { position: fixed; bottom: -60px; left: 50%; transform: translateX(-50%); background: var(--title-color); color: #fff; padding: 10px 20px; font-size: 1.2rem; z-index: 200; transition: bottom 0.3s ease; white-space: nowrap; border-radius: 12px; border: 2px solid var(--black); }
-.toast.show { bottom: 110px; }
+.toast.show { bottom: 120px; }
