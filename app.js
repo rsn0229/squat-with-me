@@ -14,7 +14,6 @@ const app = {
         isWorkingOut: false, timer: null,
         wasWorkingOut: false, 
         
-        // 💡 추가됨: 수동 카운트 모드 여부
         isManualMode: false,
         
         motionHandler: null,
@@ -26,7 +25,12 @@ const app = {
         workoutLogs: JSON.parse(localStorage.getItem('swm_logs') || '{}'),
         currentCalDate: new Date(),
         oshiName: localStorage.getItem('swm_oshi_name') || 'ME!',
-        userHeight: parseInt(localStorage.getItem('swm_height') || '165'),
+        
+        // 💡 사용자 키(userHeight)를 삭제하고 센서 민감도(1~10) 추가
+        sensorSensitivity: parseInt(localStorage.getItem('swm_sensitivity') || '5'),
+        baseG: 9.81, 
+        calibValues: [],
+        tempMotionHandler: null,
         
         images: JSON.parse(localStorage.getItem('swm_images') || '{"main":"","workout":"","finish":""}'),
         colors: JSON.parse(localStorage.getItem('swm_colors') || '{"bg":"#f5f5f5","box":"#ffffff","title":"#61b8f2","squat":"#61b8f2","plank":"#fff1a8","calendar":"#3b82f6","element":"#ffffff"}'),
@@ -117,7 +121,7 @@ const app = {
 
         const cloudData = {
             streak: this.state.streak, lastDate: this.state.lastDate, sets: this.state.sets, reps: this.state.reps, rest: this.state.rest,
-            workoutLogs: this.state.workoutLogs, oshiName: this.state.oshiName, userHeight: this.state.userHeight, 
+            workoutLogs: this.state.workoutLogs, oshiName: this.state.oshiName, sensorSensitivity: this.state.sensorSensitivity, 
             colors: this.state.colors, palette: this.state.palette, quotes: this.state.quotes
         };
 
@@ -154,12 +158,12 @@ const app = {
         this.state.streak = loaded.streak || 0; this.state.lastDate = loaded.lastDate || '';
         this.state.sets = loaded.sets || 3; this.state.reps = loaded.reps || 10; this.state.rest = loaded.rest || 30;
         this.state.workoutLogs = loaded.workoutLogs || {}; this.state.oshiName = loaded.oshiName || 'ME!';
-        this.state.userHeight = loaded.userHeight || 165; this.state.colors = loaded.colors || this.state.colors;
+        this.state.sensorSensitivity = loaded.sensorSensitivity || 5; this.state.colors = loaded.colors || this.state.colors;
         this.state.palette = loaded.palette || []; this.state.quotes = loaded.quotes || this.state.quotes;
 
         localStorage.setItem('swm_streak', this.state.streak); localStorage.setItem('swm_last_date', this.state.lastDate);
         localStorage.setItem('swm_logs', JSON.stringify(this.state.workoutLogs)); localStorage.setItem('swm_oshi_name', this.state.oshiName);
-        localStorage.setItem('swm_height', this.state.userHeight); localStorage.setItem('swm_colors', JSON.stringify(this.state.colors));
+        localStorage.setItem('swm_sensitivity', this.state.sensorSensitivity); localStorage.setItem('swm_colors', JSON.stringify(this.state.colors));
         localStorage.setItem('swm_palette', JSON.stringify(this.state.palette)); localStorage.setItem('swm_quotes', JSON.stringify(this.state.quotes));
 
         this.checkStreak(); this.setDefaultMainQuote(); this.applySavedCustomizations();
@@ -201,15 +205,28 @@ const app = {
     applySavedCustomizations() {
         document.getElementById('oshi-name-display').innerText = this.state.oshiName;
         document.getElementById('input-oshi-name').value = this.state.oshiName;
-        document.getElementById('input-user-height').value = this.state.userHeight;
+        
+        // 💡 슬라이더 값 불러오기 적용
+        const senInput = document.getElementById('input-sensor-sensitivity');
+        if(senInput) {
+            senInput.value = this.state.sensorSensitivity;
+            document.getElementById('disp-sensor-sensitivity').innerText = this.state.sensorSensitivity;
+        }
+        
         this.updateImageDisplays(); this.applyColorsToDOM(); this.renderPalette();
     },
 
     saveBasicSettings() {
         const newName = document.getElementById('input-oshi-name').value.trim() || 'ME!';
-        const newHeight = parseInt(document.getElementById('input-user-height').value) || 165;
-        this.state.oshiName = newName; this.state.userHeight = newHeight;
-        localStorage.setItem('swm_oshi_name', newName); localStorage.setItem('swm_height', newHeight);
+        // 💡 슬라이더 저장 로직 적용
+        const newSensitivity = parseInt(document.getElementById('input-sensor-sensitivity').value) || 5;
+        
+        this.state.oshiName = newName; 
+        this.state.sensorSensitivity = newSensitivity;
+        
+        localStorage.setItem('swm_oshi_name', newName); 
+        localStorage.setItem('swm_sensitivity', newSensitivity);
+        
         document.getElementById('oshi-name-display').innerText = newName;
         this.showToast(`기본 설정 저장 완료!`);
     },
@@ -251,7 +268,7 @@ const app = {
         const dataUrl = finalCanvas.toDataURL('image/png');
         this.state.images[this.state.cropTarget] = dataUrl;
         localStorage.setItem('swm_images', JSON.stringify(this.state.images));
-        this.updateImageDisplays(); this.showToast("이미지가 성공적으로 적용되었습니다!"); this.closeCropModal();
+        this.updateImageDisplays(); this.showToast("이미지가 성공적으로 적용되었습니다! 📸"); this.closeCropModal();
     },
     
     updateImageDisplays() {
@@ -323,7 +340,7 @@ const app = {
             localStorage.setItem('swm_palette', JSON.stringify(this.state.palette));
             this.renderPalette();
         }
-        this.syncColorPicker(); this.showToast("색상이 적용되었습니다!");
+        this.syncColorPicker(); this.showToast("색상이 적용되었습니다! 🎨");
     },
     
     applyColorsToDOM() {
@@ -370,7 +387,7 @@ const app = {
             this.state.quotes[category].push(newQuote);
             localStorage.setItem('swm_quotes', JSON.stringify(this.state.quotes));
             document.getElementById('input-quote').value = '';
-            this.renderQuoteList(); this.showToast("대사가 추가되었습니다!");
+            this.renderQuoteList(); this.showToast("대사가 추가되었습니다! 💬");
         }
     },
     
@@ -384,12 +401,6 @@ const app = {
             item.innerHTML = `<span>${quote}</span> <button class="quote-del" onclick="app.removeQuote('${category}', ${index})">삭제</button>`;
             container.appendChild(item);
         });
-    },
-    
-    removeQuote(category, index) {
-        this.state.quotes[category].splice(index, 1);
-        localStorage.setItem('swm_quotes', JSON.stringify(this.state.quotes));
-        this.renderQuoteList();
     },
     
     setMainQuote(text) { document.getElementById('main-speech').innerHTML = text; },
@@ -439,13 +450,13 @@ const app = {
         this.switchView('view-setup');
     },
 
-    // 💡 변경됨: 사용자 제스처(클릭) 즉시 권한을 요청하도록 순서 변경
+    // 💡 변경됨: 버튼을 누르는 이벤트 안에서만 권한 요청이 정상 작동하도록 순서 변경
     initWorkoutProcess() {
-        this.state.isManualMode = false; // 시작할 땐 수동모드 꺼짐으로 초기화
+        this.state.isManualMode = false;
         
         if (this.state.mode === 'squat') {
-            // 버튼 클릭 즉시 권한 묻기! (iOS 보안 정책 우회)
             if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+                // 사용자가 화면을 클릭(터치)한 직후여야 이 팝업이 뜹니다.
                 DeviceMotionEvent.requestPermission().then(res => {
                     if (res === 'granted') {
                         this.showSquatGuide();
@@ -454,11 +465,12 @@ const app = {
                         this.startManualMode();
                     }
                 }).catch(err => {
-                    console.error(err);
-                    this.showSquatGuide();
+                    console.error("센서 권한 에러:", err);
+                    this.showSquatGuide(); 
                 });
             } else {
-                this.showSquatGuide(); // Android 등
+                // Android나 API가 필요 없는 브라우저 환경
+                this.showSquatGuide();
             }
         } else {
             this.startWorkout(); // 플랭크는 센서 없으니 바로 시작
@@ -468,29 +480,39 @@ const app = {
     showSquatGuide() {
         this.resetHoldState();
         document.getElementById('squat-guide').classList.remove('hidden');
+        
+        // 💡 영점 조정을 위해 가이드 화면에서 센서 값을 몰래 수집합니다.
+        this.state.calibValues = [];
+        const self = this;
+        this.state.tempMotionHandler = function(event) {
+            const acc = event.accelerationIncludingGravity;
+            if (acc) {
+                const mag = Math.sqrt(Math.pow(acc.x, 2) + Math.pow(acc.y, 2) + Math.pow(acc.z, 2));
+                self.state.calibValues.push(mag);
+            }
+        };
+        window.addEventListener('devicemotion', this.state.tempMotionHandler);
     },
 
     cancelSquatGuide() {
         this.resetHoldState();
         document.getElementById('squat-guide').classList.add('hidden');
+        // 가이드를 취소하면 수집하던 센서도 끕니다.
+        if (this.state.tempMotionHandler) {
+            window.removeEventListener('devicemotion', this.state.tempMotionHandler);
+            this.state.tempMotionHandler = null;
+        }
     },
 
-    // 💡 추가됨: 수동 카운트 모드 활성화 함수
     startManualMode() {
         this.resetHoldState();
         document.getElementById('squat-guide').classList.add('hidden');
+        if (this.state.tempMotionHandler) {
+            window.removeEventListener('devicemotion', this.state.tempMotionHandler);
+            this.state.tempMotionHandler = null;
+        }
         this.state.isManualMode = true;
         this.startWorkout();
-    },
-
-    resetHoldState() {
-        this.state.holdState = { left: false, right: false };
-        this.state.holdProgress = 0;
-        if(this.state.holdTimer) clearInterval(this.state.holdTimer);
-        this.state.holdTimer = null;
-        this.updateGauge();
-        document.getElementById('thumb-left').classList.remove('active');
-        document.getElementById('thumb-right').classList.remove('active');
     },
 
     startHold(side, event) {
@@ -501,13 +523,24 @@ const app = {
         
         if (this.state.holdState.left && this.state.holdState.right && !this.state.holdTimer) {
             this.state.holdTimer = setInterval(() => {
-                this.state.holdProgress += (100 / (3000 / 50)); 
+                // 💡 3초에서 2초(2000ms)로 홀드 시간 단축
+                this.state.holdProgress += (100 / (2000 / 50)); 
                 this.updateGauge();
                 
                 if (this.state.holdProgress >= 100) {
                     clearInterval(this.state.holdTimer);
                     this.state.holdProgress = 100;
                     this.updateGauge();
+                    
+                    // 💡 2초 동안 수집한 센서 값들의 평균을 내어 내 폰만의 기준 중력값(baseG)으로 설정!
+                    if (this.state.calibValues.length > 0) {
+                        const sum = this.state.calibValues.reduce((a, b) => a + b, 0);
+                        this.state.baseG = sum / this.state.calibValues.length;
+                    }
+                    if (this.state.tempMotionHandler) {
+                        window.removeEventListener('devicemotion', this.state.tempMotionHandler);
+                        this.state.tempMotionHandler = null;
+                    }
                     
                     setTimeout(() => {
                         document.getElementById('squat-guide').classList.add('hidden');
@@ -539,7 +572,6 @@ const app = {
         if(rightCircle) rightCircle.style.strokeDashoffset = currentOffset;
     },
 
-    // 💡 변경됨: 수동 모드일 때 UI 변경 (버튼 교체, 텍스트 교체)
     startWorkout() {
         this.state.currentSet = 1; this.state.currentProgress = 0;
         this.state.workoutStartTime = Date.now();
@@ -552,34 +584,26 @@ const app = {
             
         document.getElementById('total-sets').innerText = this.state.sets;
         
-// ... (이전 코드 생략) ...
-    
-    // 버튼 및 카운터 토글
-    const btnPause = document.getElementById('btn-pause-workout');
-    const btnManual = document.getElementById('btn-manual-complete');
-    
-    if (this.state.isManualMode) {
-        // 💡 수정된 부분: 큰 글씨 요소에 횟수를 넣고, 작은 글씨 요소에 텍스트를 넣습니다.
-        document.getElementById('workout-count').innerText = this.state.reps; 
-        document.getElementById('workout-sub').innerText = isSquat ? " 회 (목표)" : " 초 (목표)";
+        const btnPause = document.getElementById('btn-pause-workout');
+        const btnManual = document.getElementById('btn-manual-complete');
         
-        btnPause.classList.add('hidden');
-        btnManual.classList.remove('hidden');
-    } else {
-        document.getElementById('workout-count').innerText = "0";
-        document.getElementById('workout-sub').innerText = isSquat ? `/ ${this.state.reps} 회` : `/ ${this.state.reps} 초`;
-        btnPause.classList.remove('hidden');
-        btnManual.classList.add('hidden');
-        btnPause.innerHTML = "일시정지";
-    }
-    
-    // ... (이후 코드 생략) ...
+        if (this.state.isManualMode) {
+            document.getElementById('workout-count').innerText = this.state.reps;
+            document.getElementById('workout-sub').innerText = isSquat ? " 회 (목표)" : " 초 (목표)";
+            btnPause.classList.add('hidden');
+            btnManual.classList.remove('hidden');
+        } else {
+            document.getElementById('workout-count').innerText = "0";
+            document.getElementById('workout-sub').innerText = isSquat ? `/ ${this.state.reps} 회` : `/ ${this.state.reps} 초`;
+            btnPause.classList.remove('hidden');
+            btnManual.classList.add('hidden');
+            btnPause.innerHTML = "일시정지 ⏸️";
+        }
         
         this.updateWorkoutUI();
         this.switchView('view-workout');
         this.setWorkoutQuote(this.getRandomQuote('start'));
 
-        // 센서 및 타이머는 수동 모드가 아닐 때만 작동
         if (!this.state.isManualMode) {
             if (isSquat) this.initSquatSensor();
             else this.initPlankTimer();
@@ -610,7 +634,7 @@ const app = {
         }
 
         this.closeModal('quit-confirm-modal');
-        this.showToast("기록이 초기화되었습니다. 😢");
+        this.showToast("기록이 초기화되었습니다. 수고하셨어요! 😢");
         
         document.getElementById('workout-count').innerText = "0";
         this.setDefaultMainQuote();
@@ -629,25 +653,36 @@ const app = {
         document.getElementById('current-set').innerText = this.state.currentSet;
     },
 
+    // 💡 센서 민감도와 디바운스(Debounce) 적용
     initSquatSensor() {
         this.state.isWorkingOut = true;
         let isDown = false;
-        document.querySelector('.progress-circle').onclick = () => { if(this.state.isWorkingOut) this.countUp(); };
+        
+        document.getElementById('workout-count').onclick = () => { if(this.state.isWorkingOut) this.countUp(); };
+        document.getElementById('img-workout').onclick = () => { if(this.state.isWorkingOut) this.countUp(); };
 
         if (this.state.motionHandler) {
             window.removeEventListener('devicemotion', this.state.motionHandler);
             this.state.motionHandler = null;
         }
 
-        const baseG = 9.81; 
-        // 💡 센서 민감도(델타값) 1.2로 하향
-        const delta = 1.2 * (165 / this.state.userHeight); 
+        // 💡 9.81이라는 고정값 대신, 방금 계산한 내 스마트폰의 기준값(baseG)을 사용합니다!
+        const baseG = this.state.baseG; 
+        
+        const minDelta = 0.5;
+        const maxDelta = 4.0;
+        const sensitivityVal = this.state.sensorSensitivity;
+        
+        const delta = minDelta + ((sensitivityVal - 1) / 9) * (maxDelta - minDelta);
         const downThreshold = baseG - delta; 
         const upThreshold = baseG + delta;   
 
+        let lastCountTime = 0;
+        const debounceMs = 800; 
+
         const self = this;
         this.state.motionHandler = function(event) {
-            if (!self.state.isWorkingOut) return;
+            if (!self.state.isWorkingOut || self.state.isManualMode) return;
             
             const acc = event.accelerationIncludingGravity;
             if (!acc) return;
@@ -657,9 +692,13 @@ const app = {
             if (mag < downThreshold) {
                 isDown = true; 
             }
-            if (mag > upThreshold && isDown) { 
-                isDown = false; 
-                self.countUp(); 
+            if (isDown && mag > upThreshold) { 
+                const now = Date.now();
+                if (now - lastCountTime > debounceMs) {
+                    isDown = false; 
+                    lastCountTime = now;
+                    self.countUp(); 
+                }
             }
         };
 
@@ -712,7 +751,7 @@ const app = {
             document.getElementById('finish-title').innerText = `${modeName} 완료! 🎉`;
             document.getElementById('finish-desc').innerHTML = `
                 총 ${this.state.reps * this.state.sets}${unit} / ${this.state.sets}세트<br>
-                소요 시간: ${m}분 ${s}초<br><br>
+                ⏳ 소요 시간: ${m}분 ${s}초<br><br>
                 <span style="color: var(--title-color);">"${this.getRandomQuote('finish')}"</span>
             `;
             
@@ -739,20 +778,15 @@ const app = {
         }, 1000);
     },
 
-// app.js 내 skipRest() 함수 내부
-    
     skipRest() {
         clearInterval(this.state.timer);
         this.state.currentSet++; this.state.currentProgress = 0;
         
-        // 💡 수정된 부분: 수동 모드이면 진행도를 0으로 바꾸지 않고 목표 횟수를 다시 표시합니다.
         if(this.state.isManualMode) {
             document.getElementById('workout-count').innerText = this.state.reps;
         }
         
         this.updateWorkoutUI();
-        
-    // ... (이후 코드 생략) ...
         this.switchView('view-workout');
         this.state.isWorkingOut = true;
         
@@ -764,8 +798,8 @@ const app = {
 
     pauseWorkout() {
         this.state.isWorkingOut = !this.state.isWorkingOut;
-        this.showToast(this.state.isWorkingOut ? "다시 가보자고!" : "잠시 멈춤");
-        document.getElementById('btn-pause-workout').innerHTML = this.state.isWorkingOut ? "일시정지" : "계속하기";
+        this.showToast(this.state.isWorkingOut ? "다시 가보자고! 🔥" : "잠시 멈춤 ⏸️");
+        document.getElementById('btn-pause-workout').innerHTML = this.state.isWorkingOut ? "일시정지 ⏸️" : "계속하기 ▶️";
     },
 
     checkStreak() { document.getElementById('streak-display').innerText = this.state.streak; },
@@ -811,11 +845,11 @@ const app = {
         list.innerHTML = '';
         
         if (!log || (typeof log === 'number' && log === 0) || (log.details && log.details.length === 0)) {
-            list.innerHTML = '<li style="color:#888;">운동 기록이 없어요 💦</li>';
+            list.innerHTML = '<li style="color:#888;">이날은 운동 기록이 없어요 💦</li>';
         } else if (typeof log === 'number') {
-            list.innerHTML = `<li>과거 기록: 총 ${log} 회/초</li>`;
+            list.innerHTML = `<li>💪 과거 기록: 총 ${log} 회/초</li>`;
         } else {
-            log.details.forEach(detail => { list.innerHTML += `<li>${detail}</li>`; });
+            log.details.forEach(detail => { list.innerHTML += `<li>💪 ${detail}</li>`; });
         }
         detailBox.classList.remove('hidden');
     },
