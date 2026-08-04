@@ -1,5 +1,6 @@
 const app = {
     config: {
+        // 💡 중요: 질문자님의 실제 값으로 변경해 주세요!
         googleClientId: "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com", 
         gasWebAppUrl: "YOUR_GAS_WEB_APP_URL" 
     },
@@ -14,7 +15,6 @@ const app = {
         isWorkingOut: false, timer: null,
         wasWorkingOut: false, 
         
-        // 💡 추가됨: 스마트폰 가속도 센서 이벤트 제어용 변수
         motionHandler: null,
         
         holdState: { left: false, right: false },
@@ -27,7 +27,6 @@ const app = {
         currentCalDate: new Date(),
         
         oshiName: localStorage.getItem('swm_oshi_name') || 'ME!',
-        // 💡 추가됨: 사용자 신장(키) 저장 (기본값 165)
         userHeight: parseInt(localStorage.getItem('swm_height') || '165'),
         
         images: JSON.parse(localStorage.getItem('swm_images') || '{"main":"","workout":"","finish":""}'),
@@ -43,6 +42,8 @@ const app = {
     },
 
     init() {
+        this.checkInAppBrowser(); // 💡 인앱 브라우저 차단 확인
+        
         if (!this.state.colors.element) {
             this.state.colors.element = '#ffffff';
         }
@@ -54,6 +55,15 @@ const app = {
         this.syncColorPicker();
         
         this.initGoogleAuth();
+    },
+
+    // 💡 추가됨: 인앱 브라우저 감지기
+    checkInAppBrowser() {
+        const ua = navigator.userAgent.toLowerCase();
+        // 카카오톡, 트위터, 인스타, 페이스북, 라인 등 주요 인앱 브라우저 키워드
+        if (ua.match(/kakaotalk|twitter|instagram|line|facebook|fbav|fban/i)) {
+            document.getElementById('inapp-warning').classList.remove('hidden');
+        }
     },
 
     initGoogleAuth() {
@@ -145,7 +155,7 @@ const app = {
             rest: this.state.rest,
             workoutLogs: this.state.workoutLogs,
             oshiName: this.state.oshiName,
-            userHeight: this.state.userHeight, // 키 데이터도 함께 클라우드에 백업
+            userHeight: this.state.userHeight, 
             colors: this.state.colors,
             palette: this.state.palette,
             quotes: this.state.quotes
@@ -279,7 +289,6 @@ const app = {
     applySavedCustomizations() {
         document.getElementById('oshi-name-display').innerText = this.state.oshiName;
         document.getElementById('input-oshi-name').value = this.state.oshiName;
-        // 💡 새로 추가된 키(cm) 데이터도 input 창에 표시
         document.getElementById('input-user-height').value = this.state.userHeight;
         
         this.updateImageDisplays();
@@ -287,7 +296,6 @@ const app = {
         this.renderPalette();
     },
 
-    // 💡 변경됨: 이름과 키를 함께 저장하는 통합 설정 함수
     saveBasicSettings() {
         const newName = document.getElementById('input-oshi-name').value.trim() || 'ME!';
         const newHeight = parseInt(document.getElementById('input-user-height').value) || 165;
@@ -597,24 +605,20 @@ const app = {
         this.switchView('view-setup');
     },
 
-    // 🚀 완전히 재설계된 스쿼트 센서 로직 (3D 벡터 통합 + 키 보정)
     initSquatSensor() {
         this.state.isWorkingOut = true;
         let isDown = false;
-        
-        // 디버깅/터치용 수동 카운트도 유지합니다
         document.querySelector('.progress-circle').onclick = () => { if(this.state.isWorkingOut) this.countUp(); };
 
-        // 💡 기존에 켜져 있던 리스너가 있다면 제거하여 메모리 누수/중복 카운트 방지
         if (this.state.motionHandler) {
             window.removeEventListener('devicemotion', this.state.motionHandler);
+            this.state.motionHandler = null;
         }
 
-        // 💡 물리 공식: 기준 키 165cm 기준 델타값 2.0. 키가 클수록 임계값 범위가 좁아져 예민해집니다.
-        const baseG = 9.81; // 지구 중력
+        const baseG = 9.81; 
         const delta = 2.0 * (165 / this.state.userHeight); 
-        const downThreshold = baseG - delta; // 예: 165cm 기준 7.81
-        const upThreshold = baseG + delta;   // 예: 165cm 기준 11.81
+        const downThreshold = baseG - delta; 
+        const upThreshold = baseG + delta;   
 
         const self = this;
         this.state.motionHandler = function(event) {
@@ -623,14 +627,11 @@ const app = {
             const acc = event.accelerationIncludingGravity;
             if (!acc) return;
 
-            // 💡 3차원 벡터 크기 계산: 폰의 각도(세우든 눕히든)에 상관없이 절대적인 상하 가속도만 추출합니다!
             const mag = Math.sqrt(Math.pow(acc.x, 2) + Math.pow(acc.y, 2) + Math.pow(acc.z, 2));
             
-            // 앉을 때 가속도 감소 (중력 방향으로 이동)
             if (mag < downThreshold) {
                 isDown = true; 
             }
-            // 일어날 때 가속도 증가 (앉은 상태여야만 카운트 인정)
             if (mag > upThreshold && isDown) { 
                 isDown = false; 
                 self.countUp(); 
@@ -746,11 +747,12 @@ const app = {
         }
     },
 
+    // 💡 수정됨: 강제로 뷰포트 정보와 센서 메모리를 초기화하여 UI 먹통 버그 방지
     quitWorkout() {
         this.state.isWorkingOut = false;
+        this.state.wasWorkingOut = false; 
         clearInterval(this.state.timer);
         
-        // 💡 리스너 깔끔하게 해제
         if (this.state.motionHandler) {
             window.removeEventListener('devicemotion', this.state.motionHandler);
             this.state.motionHandler = null;
@@ -758,6 +760,8 @@ const app = {
 
         this.closeModal('quit-confirm-modal');
         this.showToast("기록이 초기화되었습니다. 수고하셨어요! 😢");
+        
+        document.getElementById('workout-count').innerText = "0";
         this.setDefaultMainQuote();
         this.switchView('view-main');
     },
@@ -793,7 +797,6 @@ const app = {
         this.state.isWorkingOut = false;
         clearInterval(this.state.timer);
         
-        // 💡 리스너 깔끔하게 해제
         if (this.state.motionHandler) {
             window.removeEventListener('devicemotion', this.state.motionHandler);
             this.state.motionHandler = null;
@@ -853,7 +856,7 @@ const app = {
         this.switchView('view-workout');
         this.state.isWorkingOut = true;
         if (this.state.mode === 'plank') this.initPlankTimer();
-        else if (this.state.mode === 'squat') this.initSquatSensor(); // 휴식 끝나면 센서 재작동
+        else if (this.state.mode === 'squat') this.initSquatSensor(); 
     },
 
     pauseWorkout() {
