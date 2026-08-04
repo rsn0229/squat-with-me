@@ -265,7 +265,7 @@ const app = {
         const dataUrl = finalCanvas.toDataURL('image/png');
         this.state.images[this.state.cropTarget] = dataUrl;
         localStorage.setItem('swm_images', JSON.stringify(this.state.images));
-        this.updateImageDisplays(); this.showToast("이미지가 성공적으로 적용되었습니다! 📸"); this.closeCropModal();
+        this.updateImageDisplays(); this.showToast("이미지가 성공적으로 적용되었습니다!"); this.closeCropModal();
     },
     
     updateImageDisplays() {
@@ -337,7 +337,7 @@ const app = {
             localStorage.setItem('swm_palette', JSON.stringify(this.state.palette));
             this.renderPalette();
         }
-        this.syncColorPicker(); this.showToast("색상이 적용되었습니다! 🎨");
+        this.syncColorPicker(); this.showToast("색상이 적용되었습니다!");
     },
     
     applyColorsToDOM() {
@@ -384,7 +384,7 @@ const app = {
             this.state.quotes[category].push(newQuote);
             localStorage.setItem('swm_quotes', JSON.stringify(this.state.quotes));
             document.getElementById('input-quote').value = '';
-            this.renderQuoteList(); this.showToast("대사가 추가되었습니다! 💬");
+            this.renderQuoteList(); this.showToast("대사가 추가되었습니다!");
         }
     },
     
@@ -471,7 +471,6 @@ const app = {
         }
     },
 
-    // 💡 누락되었던 필수 초기화 함수 부활!
     resetHoldState() {
         this.state.holdState = { left: false, right: false };
         this.state.holdProgress = 0;
@@ -601,7 +600,7 @@ const app = {
             document.getElementById('workout-sub').innerText = isSquat ? `/ ${this.state.reps} 회` : `/ ${this.state.reps} 초`;
             btnPause.classList.remove('hidden');
             btnManual.classList.add('hidden');
-            btnPause.innerHTML = "일시정지 ⏸️";
+            btnPause.innerHTML = "일시정지";
         }
         
         this.updateWorkoutUI();
@@ -638,7 +637,7 @@ const app = {
         }
 
         this.closeModal('quit-confirm-modal');
-        this.showToast("기록이 초기화되었습니다. 수고하셨어요! 😢");
+        this.showToast("기록이 초기화되었습니다. 😢");
         
         document.getElementById('workout-count').innerText = "0";
         this.setDefaultMainQuote();
@@ -800,8 +799,8 @@ const app = {
 
     pauseWorkout() {
         this.state.isWorkingOut = !this.state.isWorkingOut;
-        this.showToast(this.state.isWorkingOut ? "다시 가보자고! 🔥" : "잠시 멈춤 ⏸️");
-        document.getElementById('btn-pause-workout').innerHTML = this.state.isWorkingOut ? "일시정지 ⏸️" : "계속하기 ▶️";
+        this.showToast(this.state.isWorkingOut ? "다시 가보자고!" : "잠시 멈춤");
+        document.getElementById('btn-pause-workout').innerHTML = this.state.isWorkingOut ? "일시정지" : "계속하기";
     },
 
     checkStreak() { document.getElementById('streak-display').innerText = this.state.streak; },
@@ -847,11 +846,11 @@ const app = {
         list.innerHTML = '';
         
         if (!log || (typeof log === 'number' && log === 0) || (log.details && log.details.length === 0)) {
-            list.innerHTML = '<li style="color:#888;">이날은 운동 기록이 없어요 💦</li>';
+            list.innerHTML = '<li style="color:#888;">운동 기록이 없어요 💦</li>';
         } else if (typeof log === 'number') {
-            list.innerHTML = `<li>💪 과거 기록: 총 ${log} 회/초</li>`;
+            list.innerHTML = `<li>과거 기록: 총 ${log} 회/초</li>`;
         } else {
-            log.details.forEach(detail => { list.innerHTML += `<li>💪 ${detail}</li>`; });
+            log.details.forEach(detail => { list.innerHTML += `<li>${detail}</li>`; });
         }
         detailBox.classList.remove('hidden');
     },
