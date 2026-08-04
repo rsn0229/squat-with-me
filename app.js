@@ -1,8 +1,7 @@
 const app = {
     config: {
-        // 💡 중요: 질문자님의 실제 값으로 변경해 주세요!
-        googleClientId: "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com", 
-        gasWebAppUrl: "YOUR_GAS_WEB_APP_URL" 
+        googleClientId: "521024868399-fi9gu0o584q1r61ckk9cqtbjcsiceos6.apps.googleusercontent.com", 
+        gasWebAppUrl: "https://script.google.com/macros/s/AKfycbwcik08HNi7aKnWzHvvcjvZHiowP7524juHA81cd4ItXvbgi9puQu1YESwaQOl2o5oN/exec" 
     },
 
     state: {
@@ -42,7 +41,7 @@ const app = {
     },
 
     init() {
-        this.checkInAppBrowser(); // 💡 인앱 브라우저 차단 확인
+        this.checkInAppBrowser();
         
         if (!this.state.colors.element) {
             this.state.colors.element = '#ffffff';
@@ -57,10 +56,8 @@ const app = {
         this.initGoogleAuth();
     },
 
-    // 💡 추가됨: 인앱 브라우저 감지기
     checkInAppBrowser() {
         const ua = navigator.userAgent.toLowerCase();
-        // 카카오톡, 트위터, 인스타, 페이스북, 라인 등 주요 인앱 브라우저 키워드
         if (ua.match(/kakaotalk|twitter|instagram|line|facebook|fbav|fban/i)) {
             document.getElementById('inapp-warning').classList.remove('hidden');
         }
@@ -605,55 +602,33 @@ const app = {
         this.switchView('view-setup');
     },
 
-    initSquatSensor() {
-        this.state.isWorkingOut = true;
-        let isDown = false;
-        document.querySelector('.progress-circle').onclick = () => { if(this.state.isWorkingOut) this.countUp(); };
-
-        if (this.state.motionHandler) {
-            window.removeEventListener('devicemotion', this.state.motionHandler);
-            this.state.motionHandler = null;
-        }
-
-        const baseG = 9.81; 
-        const delta = 2.0 * (165 / this.state.userHeight); 
-        const downThreshold = baseG - delta; 
-        const upThreshold = baseG + delta;   
-
-        const self = this;
-        this.state.motionHandler = function(event) {
-            if (!self.state.isWorkingOut) return;
-            
-            const acc = event.accelerationIncludingGravity;
-            if (!acc) return;
-
-            const mag = Math.sqrt(Math.pow(acc.x, 2) + Math.pow(acc.y, 2) + Math.pow(acc.z, 2));
-            
-            if (mag < downThreshold) {
-                isDown = true; 
-            }
-            if (mag > upThreshold && isDown) { 
-                isDown = false; 
-                self.countUp(); 
-            }
-        };
-
-        if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-            DeviceMotionEvent.requestPermission().then(res => { 
-                if (res === 'granted') window.addEventListener('devicemotion', this.state.motionHandler); 
-            }).catch(console.error);
-        } else { 
-            window.addEventListener('devicemotion', this.state.motionHandler); 
-        }
-    },
-
+    // 💡 변경됨: 버튼 누르는 즉시 권한을 체크하도록 로직 전면 수정
     initWorkoutProcess() {
         if (this.state.mode === 'squat') {
-            this.resetHoldState();
-            document.getElementById('squat-guide').classList.remove('hidden');
+            // 브라우저 권한 요청은 반드시 사용자 클릭 직후 동기적으로 발생해야 합니다.
+            if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+                DeviceMotionEvent.requestPermission().then(res => {
+                    if (res === 'granted') {
+                        this.showSquatGuide();
+                    } else {
+                        this.showToast("센서 접근 권한이 거부되었습니다. 😢");
+                    }
+                }).catch(err => {
+                    console.error(err);
+                    this.showSquatGuide(); // 에러 시 일단 넘어가기
+                });
+            } else {
+                this.showSquatGuide();
+            }
         } else {
             this.startWorkout();
         }
+    },
+
+    // 💡 가이드 모달 띄우기 분리
+    showSquatGuide() {
+        this.resetHoldState();
+        document.getElementById('squat-guide').classList.remove('hidden');
     },
 
     cancelSquatGuide() {
@@ -747,10 +722,8 @@ const app = {
         }
     },
 
-    // 💡 수정됨: 강제로 뷰포트 정보와 센서 메모리를 초기화하여 UI 먹통 버그 방지
     quitWorkout() {
         this.state.isWorkingOut = false;
-        this.state.wasWorkingOut = false; 
         clearInterval(this.state.timer);
         
         if (this.state.motionHandler) {
@@ -760,8 +733,6 @@ const app = {
 
         this.closeModal('quit-confirm-modal');
         this.showToast("기록이 초기화되었습니다. 수고하셨어요! 😢");
-        
-        document.getElementById('workout-count').innerText = "0";
         this.setDefaultMainQuote();
         this.switchView('view-main');
     },
@@ -774,6 +745,43 @@ const app = {
     updateWorkoutUI() {
         document.getElementById('workout-count').innerText = this.state.currentProgress;
         document.getElementById('current-set').innerText = this.state.currentSet;
+    },
+
+    // 💡 변경됨: 센서 민감도 대폭 상향 (기존 delta 2.0 -> 1.2)
+    initSquatSensor() {
+        this.state.isWorkingOut = true;
+        let isDown = false;
+        document.querySelector('.progress-circle').onclick = () => { if(this.state.isWorkingOut) this.countUp(); };
+
+        if (this.state.motionHandler) {
+            window.removeEventListener('devicemotion', this.state.motionHandler);
+            this.state.motionHandler = null;
+        }
+
+        const baseG = 9.81; 
+        const delta = 1.2 * (165 / this.state.userHeight); 
+        const downThreshold = baseG - delta; 
+        const upThreshold = baseG + delta;   
+
+        const self = this;
+        this.state.motionHandler = function(event) {
+            if (!self.state.isWorkingOut) return;
+            
+            const acc = event.accelerationIncludingGravity;
+            if (!acc) return;
+
+            const mag = Math.sqrt(Math.pow(acc.x, 2) + Math.pow(acc.y, 2) + Math.pow(acc.z, 2));
+            
+            if (mag < downThreshold) {
+                isDown = true; 
+            }
+            if (mag > upThreshold && isDown) { 
+                isDown = false; 
+                self.countUp(); 
+            }
+        };
+
+        window.addEventListener('devicemotion', this.state.motionHandler); 
     },
 
     initPlankTimer() {
