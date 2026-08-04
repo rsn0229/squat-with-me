@@ -251,7 +251,7 @@ const app = {
         const dataUrl = finalCanvas.toDataURL('image/png');
         this.state.images[this.state.cropTarget] = dataUrl;
         localStorage.setItem('swm_images', JSON.stringify(this.state.images));
-        this.updateImageDisplays(); this.showToast("이미지가 성공적으로 적용되었습니다! 📸"); this.closeCropModal();
+        this.updateImageDisplays(); this.showToast("이미지가 성공적으로 적용되었습니다!"); this.closeCropModal();
     },
     
     updateImageDisplays() {
@@ -323,7 +323,7 @@ const app = {
             localStorage.setItem('swm_palette', JSON.stringify(this.state.palette));
             this.renderPalette();
         }
-        this.syncColorPicker(); this.showToast("색상이 적용되었습니다! 🎨");
+        this.syncColorPicker(); this.showToast("색상이 적용되었습니다!");
     },
     
     applyColorsToDOM() {
@@ -370,7 +370,7 @@ const app = {
             this.state.quotes[category].push(newQuote);
             localStorage.setItem('swm_quotes', JSON.stringify(this.state.quotes));
             document.getElementById('input-quote').value = '';
-            this.renderQuoteList(); this.showToast("대사가 추가되었습니다! 💬");
+            this.renderQuoteList(); this.showToast("대사가 추가되었습니다!");
         }
     },
     
@@ -552,22 +552,28 @@ const app = {
             
         document.getElementById('total-sets').innerText = this.state.sets;
         
-        // 버튼 및 카운터 토글
-        const btnPause = document.getElementById('btn-pause-workout');
-        const btnManual = document.getElementById('btn-manual-complete');
+// ... (이전 코드 생략) ...
+    
+    // 버튼 및 카운터 토글
+    const btnPause = document.getElementById('btn-pause-workout');
+    const btnManual = document.getElementById('btn-manual-complete');
+    
+    if (this.state.isManualMode) {
+        // 💡 수정된 부분: 큰 글씨 요소에 횟수를 넣고, 작은 글씨 요소에 텍스트를 넣습니다.
+        document.getElementById('workout-count').innerText = this.state.reps; 
+        document.getElementById('workout-sub').innerText = isSquat ? " 회 (목표)" : " 초 (목표)";
         
-        if (this.state.isManualMode) {
-            document.getElementById('workout-count').innerText = "목표";
-            document.getElementById('workout-sub').innerText = ` ${this.state.reps} 회`;
-            btnPause.classList.add('hidden');
-            btnManual.classList.remove('hidden');
-        } else {
-            document.getElementById('workout-count').innerText = "0";
-            document.getElementById('workout-sub').innerText = isSquat ? `/ ${this.state.reps} 회` : `/ ${this.state.reps} 초`;
-            btnPause.classList.remove('hidden');
-            btnManual.classList.add('hidden');
-            btnPause.innerHTML = "일시정지 ⏸️";
-        }
+        btnPause.classList.add('hidden');
+        btnManual.classList.remove('hidden');
+    } else {
+        document.getElementById('workout-count').innerText = "0";
+        document.getElementById('workout-sub').innerText = isSquat ? `/ ${this.state.reps} 회` : `/ ${this.state.reps} 초`;
+        btnPause.classList.remove('hidden');
+        btnManual.classList.add('hidden');
+        btnPause.innerHTML = "일시정지";
+    }
+    
+    // ... (이후 코드 생략) ...
         
         this.updateWorkoutUI();
         this.switchView('view-workout');
@@ -604,7 +610,7 @@ const app = {
         }
 
         this.closeModal('quit-confirm-modal');
-        this.showToast("기록이 초기화되었습니다. 수고하셨어요! 😢");
+        this.showToast("기록이 초기화되었습니다. 😢");
         
         document.getElementById('workout-count').innerText = "0";
         this.setDefaultMainQuote();
@@ -706,7 +712,7 @@ const app = {
             document.getElementById('finish-title').innerText = `${modeName} 완료! 🎉`;
             document.getElementById('finish-desc').innerHTML = `
                 총 ${this.state.reps * this.state.sets}${unit} / ${this.state.sets}세트<br>
-                ⏳ 소요 시간: ${m}분 ${s}초<br><br>
+                소요 시간: ${m}분 ${s}초<br><br>
                 <span style="color: var(--title-color);">"${this.getRandomQuote('finish')}"</span>
             `;
             
@@ -733,16 +739,20 @@ const app = {
         }, 1000);
     },
 
+// app.js 내 skipRest() 함수 내부
+    
     skipRest() {
         clearInterval(this.state.timer);
         this.state.currentSet++; this.state.currentProgress = 0;
         
-        // 💡 수동 모드이면 진행도를 0으로 바꾸지 않고 텍스트 복구
+        // 💡 수정된 부분: 수동 모드이면 진행도를 0으로 바꾸지 않고 목표 횟수를 다시 표시합니다.
         if(this.state.isManualMode) {
-            document.getElementById('workout-count').innerText = "목표";
+            document.getElementById('workout-count').innerText = this.state.reps;
         }
         
         this.updateWorkoutUI();
+        
+    // ... (이후 코드 생략) ...
         this.switchView('view-workout');
         this.state.isWorkingOut = true;
         
@@ -754,8 +764,8 @@ const app = {
 
     pauseWorkout() {
         this.state.isWorkingOut = !this.state.isWorkingOut;
-        this.showToast(this.state.isWorkingOut ? "다시 가보자고! 🔥" : "잠시 멈춤 ⏸️");
-        document.getElementById('btn-pause-workout').innerHTML = this.state.isWorkingOut ? "일시정지 ⏸️" : "계속하기 ▶️";
+        this.showToast(this.state.isWorkingOut ? "다시 가보자고!" : "잠시 멈춤");
+        document.getElementById('btn-pause-workout').innerHTML = this.state.isWorkingOut ? "일시정지" : "계속하기";
     },
 
     checkStreak() { document.getElementById('streak-display').innerText = this.state.streak; },
@@ -801,11 +811,11 @@ const app = {
         list.innerHTML = '';
         
         if (!log || (typeof log === 'number' && log === 0) || (log.details && log.details.length === 0)) {
-            list.innerHTML = '<li style="color:#888;">이날은 운동 기록이 없어요 💦</li>';
+            list.innerHTML = '<li style="color:#888;">운동 기록이 없어요 💦</li>';
         } else if (typeof log === 'number') {
-            list.innerHTML = `<li>💪 과거 기록: 총 ${log} 회/초</li>`;
+            list.innerHTML = `<li>과거 기록: 총 ${log} 회/초</li>`;
         } else {
-            log.details.forEach(detail => { list.innerHTML += `<li>💪 ${detail}</li>`; });
+            log.details.forEach(detail => { list.innerHTML += `<li>${detail}</li>`; });
         }
         detailBox.classList.remove('hidden');
     },
