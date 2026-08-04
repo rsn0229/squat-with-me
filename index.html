@@ -10,7 +10,6 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- 💡 추가됨: 인앱 브라우저 차단 오버레이 (반투명 검정 레이아웃) -->
     <div id="inapp-warning" class="guide-overlay hidden" style="z-index: 9999; background: rgba(0,0,0,0.85);">
         <div class="guide-content text-center" style="padding: 30px;">
             <h2 style="color: #ff9999; margin-bottom: 20px;">⚠️ 브라우저 변경 안내</h2>
@@ -105,35 +104,31 @@
                 <div id="thumb-left" class="thumb-btn" 
                      ontouchstart="app.startHold('left', event)" onmousedown="app.startHold('left', event)" 
                      ontouchend="app.endHold('left')" onmouseup="app.endHold('left')" onmouseleave="app.endHold('left')">
-                    <svg class="progress-ring">
-                        <circle class="progress-ring__circle" cx="50" cy="50" r="42"></circle>
-                    </svg>
+                    <svg class="progress-ring"><circle class="progress-ring__circle" cx="50" cy="50" r="42"></circle></svg>
                     <div class="finger-silhouette">
-                        <svg viewBox="0 0 24 24" width="45" height="45" fill="rgba(255,255,255,0.4)">
-                            <path d="M17,8C17,5.24 14.76,3 12,3S7,5.24 7,8V15H5V8C5,4.14 8.14,1 12,1S19,4.14 19,8V20H17V8M13,9.5V17H11V9.5H13M15.5,10V22H14V10H15.5M8.5,11V19H10V11H8.5Z" />
-                        </svg>
+                        <svg viewBox="0 0 24 24" width="45" height="45" fill="rgba(255,255,255,0.4)"><path d="M17,8C17,5.24 14.76,3 12,3S7,5.24 7,8V15H5V8C5,4.14 8.14,1 12,1S19,4.14 19,8V20H17V8M13,9.5V17H11V9.5H13M15.5,10V22H14V10H15.5M8.5,11V19H10V11H8.5Z" /></svg>
                     </div>
                 </div>
                 <div id="thumb-right" class="thumb-btn" 
                      ontouchstart="app.startHold('right', event)" onmousedown="app.startHold('right', event)" 
                      ontouchend="app.endHold('right')" onmouseup="app.endHold('right')" onmouseleave="app.endHold('right')">
-                    <svg class="progress-ring">
-                        <circle class="progress-ring__circle" cx="50" cy="50" r="42"></circle>
-                    </svg>
+                    <svg class="progress-ring"><circle class="progress-ring__circle" cx="50" cy="50" r="42"></circle></svg>
                     <div class="finger-silhouette">
-                        <svg viewBox="0 0 24 24" width="45" height="45" fill="rgba(255,255,255,0.4)">
-                            <path d="M17,8C17,5.24 14.76,3 12,3S7,5.24 7,8V15H5V8C5,4.14 8.14,1 12,1S19,4.14 19,8V20H17V8M13,9.5V17H11V9.5H13M15.5,10V22H14V10H15.5M8.5,11V19H10V11H8.5Z" />
-                        </svg>
+                        <svg viewBox="0 0 24 24" width="45" height="45" fill="rgba(255,255,255,0.4)"><path d="M17,8C17,5.24 14.76,3 12,3S7,5.24 7,8V15H5V8C5,4.14 8.14,1 12,1S19,4.14 19,8V20H17V8M13,9.5V17H11V9.5H13M15.5,10V22H14V10H15.5M8.5,11V19H10V11H8.5Z" /></svg>
                     </div>
                 </div>
             </div>
-            <p style="margin-top: 20px; font-size: 0.9rem; color: #aaa;">(두 곳을 동시에 누르고 유지하세요)</p>
+            
+            <!-- 💡 추가됨: 수동 카운트로 전환 버튼 -->
+            <p style="margin-top: 35px; font-size: 1.1rem; color: #fff; text-decoration: underline; text-underline-offset: 4px; cursor: pointer;" onclick="app.startManualMode()">
+                👉 터치가 어렵다면 수동 카운트로 진행하기
+            </p>
         </div>
     </div>
 
     <main id="view-workout" class="view">
         <div class="content-wrapper w-100">
-            <div class="workout-header text-center" style="margin-bottom: 15px;">
+            <div class="workout-header text-center" style="margin-bottom: 10px;">
                 <h2 id="workout-mode-title" class="title-color" style="margin:0;">스쿼트 진행 중</h2>
             </div>
             
@@ -142,7 +137,7 @@
                     <span id="workout-count" class="text-huge">0</span>
                     <span id="workout-sub" class="text-medium">/ 10 회</span>
                 </div>
-                <div class="dash-set">현재 세트: <span id="current-set">1</span> / <span id="total-sets">3</span></div>
+                <div class="dash-set">진행 세트: <span id="current-set">1</span> / <span id="total-sets">3</span></div>
                 <div id="workout-speech" class="dash-quote">"응원 대사!"</div>
             </div>
 
@@ -153,6 +148,9 @@
 
         <div class="action-buttons">
             <button id="btn-pause-workout" class="brutal-btn btn-plank" onclick="app.pauseWorkout()">일시정지 ⏸️</button>
+            <!-- 💡 추가됨: 수동 모드 전용 세트 완료 버튼 (기본 숨김) -->
+            <button id="btn-manual-complete" class="brutal-btn btn-squat hidden" onclick="app.completeSet()">세트 완료 (휴식하기) ☕</button>
+            
             <button class="brutal-btn btn-gray" onclick="app.confirmQuit()">중단하기 🛑</button>
         </div>
     </main>
@@ -193,7 +191,6 @@
         </div>
     </main>
 
-    <!-- 중단 확인 모달 -->
     <div id="quit-confirm-modal" class="modal">
         <div class="modal-content brutal-box text-center">
             <h2 style="color: #cf2b2b; margin-bottom: 15px;">정말 중단하시겠어요?</h2>
@@ -205,7 +202,7 @@
         </div>
     </div>
 
-    <!-- 달력 모달 -->
+    <!-- 캘린더 및 설정 모달 코드는 동일하게 유지 (분량상 축약 없이 전체 제공) -->
     <div id="calendar-modal" class="modal">
         <div class="modal-content brutal-box scrollable">
             <div class="modal-header">
@@ -237,7 +234,6 @@
         </div>
     </div>
 
-    <!-- 설정 모달 -->
     <div id="settings-modal" class="modal">
         <div class="modal-content brutal-box scrollable">
             <div class="modal-header">
@@ -257,10 +253,8 @@
                 <div class="form-group">
                     <label>최애 이름 변경</label>
                     <input type="text" id="input-oshi-name" class="brutal-input w-100" placeholder="예: ME!" style="margin-bottom: 15px;">
-                    
                     <label>내 키 (cm) - <span style="font-size: 0.85rem; color: #888;">스쿼트 센서 보정용</span></label>
                     <input type="number" id="input-user-height" class="brutal-input w-100" placeholder="예: 165" style="margin-bottom: 15px;">
-                    
                     <button class="brutal-btn btn-squat w-100" style="padding: 8px 12px;" onclick="app.saveBasicSettings()">저장하기</button>
                 </div>
             </div>
@@ -323,9 +317,7 @@
                     <p style="font-size: 0.95rem; margin-bottom: 15px; color: var(--box-text);">
                         구글 로그인 후 모든 기록과 설정을 구글 시트에 안전하게 백업하세요.
                     </p>
-                    
                     <div id="google-login-btn-container" style="display: flex; justify-content: center; margin-bottom: 10px;"></div>
-                    
                     <div id="google-user-info" class="brutal-box hidden" style="padding: 12px; font-size: 1.1rem; background: var(--element-bg); color: var(--element-text);">
                         <img id="google-user-pic" src="" style="width: 45px; height: 45px; border-radius: 50%; margin-bottom: 5px; border: 2px solid var(--black);">
                         <div id="google-user-name" style="font-weight: bold;"></div>
@@ -342,7 +334,6 @@
         </div>
     </div>
 
-    <!-- 이미지 자르기 모달 -->
     <div id="crop-modal" class="modal">
         <div class="modal-content brutal-box">
             <div class="modal-header">
