@@ -1,8 +1,7 @@
 const app = {
     config: {
-        // 💡 중요: 질문자님의 실제 값으로 변경해 주세요!
-        googleClientId: "521024868399-fi9gu0o584q1r61ckk9cqtbjcsiceos6.apps.googleusercontent.com", 
-        gasWebAppUrl: "https://script.google.com/macros/s/AKfycbwcik08HNi7aKnWzHvvcjvZHiowP7524juHA81cd4ItXvbgi9puQu1YESwaQOl2o5oN/exec" 
+        googleClientId: "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com", 
+        gasWebAppUrl: "YOUR_GAS_WEB_APP_URL" 
     },
 
     state: {
@@ -15,6 +14,9 @@ const app = {
         isWorkingOut: false, timer: null,
         wasWorkingOut: false, 
         
+        // 💡 추가됨: 스마트폰 가속도 센서 이벤트 제어용 변수
+        motionHandler: null,
+        
         holdState: { left: false, right: false },
         holdTimer: null,
         holdProgress: 0,
@@ -25,8 +27,10 @@ const app = {
         currentCalDate: new Date(),
         
         oshiName: localStorage.getItem('swm_oshi_name') || 'ME!',
-        images: JSON.parse(localStorage.getItem('swm_images') || '{"main":"","workout":"","finish":""}'),
+        // 💡 추가됨: 사용자 신장(키) 저장 (기본값 165)
+        userHeight: parseInt(localStorage.getItem('swm_height') || '165'),
         
+        images: JSON.parse(localStorage.getItem('swm_images') || '{"main":"","workout":"","finish":""}'),
         colors: JSON.parse(localStorage.getItem('swm_colors') || '{"bg":"#f5f5f5","box":"#ffffff","title":"#61b8f2","squat":"#61b8f2","plank":"#fff1a8","calendar":"#3b82f6","element":"#ffffff"}'),
         palette: JSON.parse(localStorage.getItem('swm_palette') || '[]'),
         quotes: JSON.parse(localStorage.getItem('swm_quotes') || '{"main":["오늘도 화이팅!"],"start":["자, 시작해보자고! 🔥"],"cheer":["자세 유지해!","조금만 더! 💦"],"finish":["고생했어! 최고야! ✨"]}'),
@@ -52,7 +56,6 @@ const app = {
         this.initGoogleAuth();
     },
 
-    // 🌐 구글 인증 및 클라우드 동기화 로직
     initGoogleAuth() {
         if (typeof google !== 'undefined' && google.accounts) {
             google.accounts.id.initialize({
@@ -114,8 +117,6 @@ const app = {
             localStorage.setItem('swm_google_user', JSON.stringify(user));
             this.renderGoogleButton();
             this.showToast(`${user.name}님 연동 완료! ☁️`);
-            
-            // 로그인 즉시 클라우드에 기존 백업이 있는지 백그라운드로 체크할 수 있습니다.
         }
     },
 
@@ -126,19 +127,16 @@ const app = {
         this.showToast("구글 계정 연동이 해제되었습니다.");
     },
 
-    // 💡 클라우드 백업 실행
     backupToCloud() {
         if (!this.state.googleUser) {
             this.showToast("먼저 구글 계정으로 로그인해주세요.");
             return;
         }
-
         if (this.config.gasWebAppUrl.includes("YOUR_GAS")) {
             this.showToast("GAS 웹 앱 URL이 설정되지 않았습니다.");
             return;
         }
 
-        // 💡 이미지(Images)를 제외한 모든 영혼(설정, 대사, 색상, 기록)을 영끌합니다.
         const cloudData = {
             streak: this.state.streak,
             lastDate: this.state.lastDate,
@@ -147,6 +145,7 @@ const app = {
             rest: this.state.rest,
             workoutLogs: this.state.workoutLogs,
             oshiName: this.state.oshiName,
+            userHeight: this.state.userHeight, // 키 데이터도 함께 클라우드에 백업
             colors: this.state.colors,
             palette: this.state.palette,
             quotes: this.state.quotes
@@ -154,7 +153,6 @@ const app = {
 
         this.showToast("☁️ 클라우드에 백업 중...");
 
-        // CORS 우회를 위해 단순 문자열(text/plain)로 POST 요청을 보냅니다.
         fetch(this.config.gasWebAppUrl, {
             method: 'POST',
             body: JSON.stringify({
@@ -174,7 +172,6 @@ const app = {
         });
     },
 
-    // 💡 클라우드 복구 실행
     restoreFromCloud() {
         if (!this.state.googleUser) return;
         
@@ -202,7 +199,6 @@ const app = {
         }
     },
 
-    // 💡 불러온 데이터를 로컬 스토리지와 화면에 반영하는 통합 함수
     applyCloudData(loaded) {
         this.state.streak = loaded.streak || 0;
         this.state.lastDate = loaded.lastDate || '';
@@ -212,20 +208,20 @@ const app = {
         
         this.state.workoutLogs = loaded.workoutLogs || {};
         this.state.oshiName = loaded.oshiName || 'ME!';
+        this.state.userHeight = loaded.userHeight || 165;
         this.state.colors = loaded.colors || this.state.colors;
         this.state.palette = loaded.palette || [];
         this.state.quotes = loaded.quotes || this.state.quotes;
 
-        // LocalStorage 전부 덮어쓰기
         localStorage.setItem('swm_streak', this.state.streak);
         localStorage.setItem('swm_last_date', this.state.lastDate);
         localStorage.setItem('swm_logs', JSON.stringify(this.state.workoutLogs));
         localStorage.setItem('swm_oshi_name', this.state.oshiName);
+        localStorage.setItem('swm_height', this.state.userHeight);
         localStorage.setItem('swm_colors', JSON.stringify(this.state.colors));
         localStorage.setItem('swm_palette', JSON.stringify(this.state.palette));
         localStorage.setItem('swm_quotes', JSON.stringify(this.state.quotes));
 
-        // 화면 새로고침
         this.checkStreak();
         this.setDefaultMainQuote();
         this.applySavedCustomizations();
@@ -253,6 +249,13 @@ const app = {
     
     closeModal(id) { document.getElementById(id).classList.remove('active'); },
     
+    showToast(msg) {
+        const toast = document.getElementById('toast-message');
+        toast.innerText = msg;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 2000);
+    },
+
     switchTab(tabId) {
         document.querySelectorAll('.tab-panel').forEach(el => {
             el.classList.remove('active');
@@ -276,18 +279,27 @@ const app = {
     applySavedCustomizations() {
         document.getElementById('oshi-name-display').innerText = this.state.oshiName;
         document.getElementById('input-oshi-name').value = this.state.oshiName;
+        // 💡 새로 추가된 키(cm) 데이터도 input 창에 표시
+        document.getElementById('input-user-height').value = this.state.userHeight;
         
         this.updateImageDisplays();
         this.applyColorsToDOM();
         this.renderPalette();
     },
 
-    saveOshiName() {
+    // 💡 변경됨: 이름과 키를 함께 저장하는 통합 설정 함수
+    saveBasicSettings() {
         const newName = document.getElementById('input-oshi-name').value.trim() || 'ME!';
+        const newHeight = parseInt(document.getElementById('input-user-height').value) || 165;
+        
         this.state.oshiName = newName;
+        this.state.userHeight = newHeight;
+        
         localStorage.setItem('swm_oshi_name', newName);
+        localStorage.setItem('swm_height', newHeight);
+        
         document.getElementById('oshi-name-display').innerText = newName;
-        this.showToast(`이름 변경 완료!`);
+        this.showToast(`기본 설정 저장 완료!`);
     },
 
     triggerCrop(event) {
@@ -585,6 +597,55 @@ const app = {
         this.switchView('view-setup');
     },
 
+    // 🚀 완전히 재설계된 스쿼트 센서 로직 (3D 벡터 통합 + 키 보정)
+    initSquatSensor() {
+        this.state.isWorkingOut = true;
+        let isDown = false;
+        
+        // 디버깅/터치용 수동 카운트도 유지합니다
+        document.querySelector('.progress-circle').onclick = () => { if(this.state.isWorkingOut) this.countUp(); };
+
+        // 💡 기존에 켜져 있던 리스너가 있다면 제거하여 메모리 누수/중복 카운트 방지
+        if (this.state.motionHandler) {
+            window.removeEventListener('devicemotion', this.state.motionHandler);
+        }
+
+        // 💡 물리 공식: 기준 키 165cm 기준 델타값 2.0. 키가 클수록 임계값 범위가 좁아져 예민해집니다.
+        const baseG = 9.81; // 지구 중력
+        const delta = 2.0 * (165 / this.state.userHeight); 
+        const downThreshold = baseG - delta; // 예: 165cm 기준 7.81
+        const upThreshold = baseG + delta;   // 예: 165cm 기준 11.81
+
+        const self = this;
+        this.state.motionHandler = function(event) {
+            if (!self.state.isWorkingOut) return;
+            
+            const acc = event.accelerationIncludingGravity;
+            if (!acc) return;
+
+            // 💡 3차원 벡터 크기 계산: 폰의 각도(세우든 눕히든)에 상관없이 절대적인 상하 가속도만 추출합니다!
+            const mag = Math.sqrt(Math.pow(acc.x, 2) + Math.pow(acc.y, 2) + Math.pow(acc.z, 2));
+            
+            // 앉을 때 가속도 감소 (중력 방향으로 이동)
+            if (mag < downThreshold) {
+                isDown = true; 
+            }
+            // 일어날 때 가속도 증가 (앉은 상태여야만 카운트 인정)
+            if (mag > upThreshold && isDown) { 
+                isDown = false; 
+                self.countUp(); 
+            }
+        };
+
+        if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+            DeviceMotionEvent.requestPermission().then(res => { 
+                if (res === 'granted') window.addEventListener('devicemotion', this.state.motionHandler); 
+            }).catch(console.error);
+        } else { 
+            window.addEventListener('devicemotion', this.state.motionHandler); 
+        }
+    },
+
     initWorkoutProcess() {
         if (this.state.mode === 'squat') {
             this.resetHoldState();
@@ -688,6 +749,13 @@ const app = {
     quitWorkout() {
         this.state.isWorkingOut = false;
         clearInterval(this.state.timer);
+        
+        // 💡 리스너 깔끔하게 해제
+        if (this.state.motionHandler) {
+            window.removeEventListener('devicemotion', this.state.motionHandler);
+            this.state.motionHandler = null;
+        }
+
         this.closeModal('quit-confirm-modal');
         this.showToast("기록이 초기화되었습니다. 수고하셨어요! 😢");
         this.setDefaultMainQuote();
@@ -702,24 +770,6 @@ const app = {
     updateWorkoutUI() {
         document.getElementById('workout-count').innerText = this.state.currentProgress;
         document.getElementById('current-set').innerText = this.state.currentSet;
-    },
-
-    initSquatSensor() {
-        this.state.isWorkingOut = true;
-        let isDown = false;
-        document.querySelector('.progress-circle').onclick = () => { if(this.state.isWorkingOut) this.countUp(); };
-
-        if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-            DeviceMotionEvent.requestPermission().then(res => { if (res == 'granted') window.addEventListener('devicemotion', handleMotion); }).catch(console.error);
-        } else { window.addEventListener('devicemotion', handleMotion); }
-
-        const self = this;
-        function handleMotion(event) {
-            if (!self.state.isWorkingOut) return;
-            let currentY = event.accelerationIncludingGravity?.y || 0;
-            if (currentY > 12) isDown = true; 
-            if (currentY < 8 && isDown) { isDown = false; self.countUp(); }
-        }
     },
 
     initPlankTimer() {
@@ -742,6 +792,12 @@ const app = {
     completeSet() {
         this.state.isWorkingOut = false;
         clearInterval(this.state.timer);
+        
+        // 💡 리스너 깔끔하게 해제
+        if (this.state.motionHandler) {
+            window.removeEventListener('devicemotion', this.state.motionHandler);
+            this.state.motionHandler = null;
+        }
         
         if (this.state.currentSet >= this.state.sets) {
             this.addWorkoutLog(this.state.mode, this.state.reps, this.state.sets);
@@ -769,9 +825,8 @@ const app = {
             
             this.switchView('view-finish');
             
-            // 💡 클라우드 로그인 시 백그라운드로 자동 동기화(백업)
             if (this.state.googleUser && this.config.gasWebAppUrl) {
-                this.backupToCloud(true); // true = 조용히 백업
+                this.backupToCloud(true); 
             }
             
         } else {
@@ -798,6 +853,7 @@ const app = {
         this.switchView('view-workout');
         this.state.isWorkingOut = true;
         if (this.state.mode === 'plank') this.initPlankTimer();
+        else if (this.state.mode === 'squat') this.initSquatSensor(); // 휴식 끝나면 센서 재작동
     },
 
     pauseWorkout() {
