@@ -2,8 +2,8 @@
     --bg-color: #f5f5f5;      
     --box-bg: #ffffff;        
     --title-color: #61b8f2;   
-    --btn-squat: #61b8f2;     
-    --btn-plank: #fff1a8;     
+    --btn-squat: #fff1a8;     
+    --btn-plank: #85c3ed;     
     
     --bg-text: #111111;
     --box-text: #111111;
@@ -110,7 +110,6 @@ body {
 .counter-btn:active { opacity: 0.7; }
 .counter-val { font-size: 2rem; flex: 1; text-align: center; border-left: var(--border-thick); border-right: var(--border-thick); background: var(--box-bg); color: var(--title-color); }
 
-/* 💡 화면 공간을 더 넉넉하게 사용하도록 max-height를 45vh로 대폭 상향 */
 .character-area { display: flex; flex-direction: column; align-items: center; margin-bottom: 15px; position: relative; width: 100%; }
 .character-img { 
     width: 280px; max-width: 100%; 
