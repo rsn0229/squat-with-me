@@ -1,7 +1,7 @@
 const app = {
     config: {
-        googleClientId: "521024868399-fi9gu0o584q1r61ckk9cqtbjcsiceos6.apps.googleusercontent.com", 
-        gasWebAppUrl: "https://script.google.com/macros/s/AKfycbwcik08HNi7aKnWzHvvcjvZHiowP7524juHA81cd4ItXvbgi9puQu1YESwaQOl2o5oN/exec" 
+        googleClientId: "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com", 
+        gasWebAppUrl: "YOUR_GAS_WEB_APP_URL" 
     },
 
     state: {
@@ -14,17 +14,17 @@ const app = {
         isWorkingOut: false, timer: null,
         wasWorkingOut: false, 
         
-        motionHandler: null,
+        // 💡 추가됨: 수동 카운트 모드 여부
+        isManualMode: false,
         
+        motionHandler: null,
         holdState: { left: false, right: false },
         holdTimer: null,
         holdProgress: 0,
         
         workoutStartTime: 0,
-        
         workoutLogs: JSON.parse(localStorage.getItem('swm_logs') || '{}'),
         currentCalDate: new Date(),
-        
         oshiName: localStorage.getItem('swm_oshi_name') || 'ME!',
         userHeight: parseInt(localStorage.getItem('swm_height') || '165'),
         
@@ -34,25 +34,14 @@ const app = {
         quotes: JSON.parse(localStorage.getItem('swm_quotes') || '{"main":["오늘도 화이팅!"],"start":["자, 시작해보자고! 🔥"],"cheer":["자세 유지해!","조금만 더! 💦"],"finish":["고생했어! 최고야! ✨"]}'),
         
         googleUser: JSON.parse(localStorage.getItem('swm_google_user') || 'null'),
-        
-        mainQuoteTimer: null,
-        cropperInstance: null,
-        cropTarget: ''
+        mainQuoteTimer: null, cropperInstance: null, cropTarget: ''
     },
 
     init() {
         this.checkInAppBrowser();
-        
-        if (!this.state.colors.element) {
-            this.state.colors.element = '#ffffff';
-        }
-        
-        this.checkStreak();
-        this.applySavedCustomizations();
-        this.renderQuoteList();
-        this.setDefaultMainQuote();
-        this.syncColorPicker();
-        
+        if (!this.state.colors.element) this.state.colors.element = '#ffffff';
+        this.checkStreak(); this.applySavedCustomizations();
+        this.renderQuoteList(); this.setDefaultMainQuote(); this.syncColorPicker();
         this.initGoogleAuth();
     },
 
@@ -70,9 +59,7 @@ const app = {
                 callback: (response) => this.handleGoogleCredential(response)
             });
             this.renderGoogleButton();
-        } else {
-            setTimeout(() => this.initGoogleAuth(), 500);
-        }
+        } else { setTimeout(() => this.initGoogleAuth(), 500); }
     },
 
     renderGoogleButton() {
@@ -92,9 +79,7 @@ const app = {
             if(btnContainer) {
                 btnContainer.classList.remove('hidden');
                 btnContainer.innerHTML = '';
-                google.accounts.id.renderButton(btnContainer, {
-                    theme: 'outline', size: 'large', text: 'signin_with'
-                });
+                google.accounts.id.renderButton(btnContainer, { theme: 'outline', size: 'large', text: 'signin_with' });
             }
         }
     },
@@ -105,21 +90,13 @@ const app = {
             const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
             const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
             return JSON.parse(jsonPayload);
-        } catch (e) {
-            return null;
-        }
+        } catch (e) { return null; }
     },
 
     handleGoogleCredential(response) {
         const payload = this.parseJwt(response.credential);
         if (payload) {
-            const user = {
-                sub: payload.sub,
-                email: payload.email,
-                name: payload.name,
-                picture: payload.picture
-            };
-            
+            const user = { sub: payload.sub, email: payload.email, name: payload.name, picture: payload.picture };
             this.state.googleUser = user;
             localStorage.setItem('swm_google_user', JSON.stringify(user));
             this.renderGoogleButton();
@@ -135,62 +112,32 @@ const app = {
     },
 
     backupToCloud() {
-        if (!this.state.googleUser) {
-            this.showToast("먼저 구글 계정으로 로그인해주세요.");
-            return;
-        }
-        if (this.config.gasWebAppUrl.includes("YOUR_GAS")) {
-            this.showToast("GAS 웹 앱 URL이 설정되지 않았습니다.");
-            return;
-        }
+        if (!this.state.googleUser) { this.showToast("먼저 구글 계정으로 로그인해주세요."); return; }
+        if (this.config.gasWebAppUrl.includes("YOUR_GAS")) { this.showToast("GAS 웹 앱 URL이 설정되지 않았습니다."); return; }
 
         const cloudData = {
-            streak: this.state.streak,
-            lastDate: this.state.lastDate,
-            sets: this.state.sets,
-            reps: this.state.reps,
-            rest: this.state.rest,
-            workoutLogs: this.state.workoutLogs,
-            oshiName: this.state.oshiName,
-            userHeight: this.state.userHeight, 
-            colors: this.state.colors,
-            palette: this.state.palette,
-            quotes: this.state.quotes
+            streak: this.state.streak, lastDate: this.state.lastDate, sets: this.state.sets, reps: this.state.reps, rest: this.state.rest,
+            workoutLogs: this.state.workoutLogs, oshiName: this.state.oshiName, userHeight: this.state.userHeight, 
+            colors: this.state.colors, palette: this.state.palette, quotes: this.state.quotes
         };
 
         this.showToast("☁️ 클라우드에 백업 중...");
-
         fetch(this.config.gasWebAppUrl, {
-            method: 'POST',
-            body: JSON.stringify({
-                action: 'save',
-                tokenPayload: this.state.googleUser,
-                cloudData: JSON.stringify(cloudData)
-            })
+            method: 'POST', body: JSON.stringify({ action: 'save', tokenPayload: this.state.googleUser, cloudData: JSON.stringify(cloudData) })
         })
         .then(res => res.json())
         .then(data => {
             if(data.status === 'success') this.showToast("✅ 클라우드 백업 완료!");
             else this.showToast("❌ 백업 실패: " + data.message);
-        })
-        .catch(err => {
-            this.showToast("❌ 백업 중 서버 오류가 발생했습니다.");
-            console.error(err);
-        });
+        }).catch(err => { this.showToast("❌ 백업 중 서버 오류가 발생했습니다."); console.error(err); });
     },
 
     restoreFromCloud() {
         if (!this.state.googleUser) return;
-        
         if(confirm("클라우드 데이터를 불러오시겠습니까?\n현재 기기의 기록과 설정이 모두 덮어씌워집니다.")) {
             this.showToast("⬇️ 클라우드에서 불러오는 중...");
-
             fetch(this.config.gasWebAppUrl, {
-                method: 'POST',
-                body: JSON.stringify({
-                    action: 'load',
-                    tokenPayload: this.state.googleUser
-                })
+                method: 'POST', body: JSON.stringify({ action: 'load', tokenPayload: this.state.googleUser })
             })
             .then(res => res.json())
             .then(data => {
@@ -198,51 +145,32 @@ const app = {
                     const loaded = JSON.parse(data.data);
                     this.applyCloudData(loaded);
                     this.showToast("✅ 데이터를 성공적으로 불러왔습니다!");
-                } else {
-                    this.showToast("⚠️ 저장된 백업 데이터가 없습니다.");
-                }
-            })
-            .catch(err => this.showToast("❌ 불러오기 실패"));
+                } else { this.showToast("⚠️ 저장된 백업 데이터가 없습니다."); }
+            }).catch(err => this.showToast("❌ 불러오기 실패"));
         }
     },
 
     applyCloudData(loaded) {
-        this.state.streak = loaded.streak || 0;
-        this.state.lastDate = loaded.lastDate || '';
-        this.state.sets = loaded.sets || 3;
-        this.state.reps = loaded.reps || 10;
-        this.state.rest = loaded.rest || 30;
-        
-        this.state.workoutLogs = loaded.workoutLogs || {};
-        this.state.oshiName = loaded.oshiName || 'ME!';
-        this.state.userHeight = loaded.userHeight || 165;
-        this.state.colors = loaded.colors || this.state.colors;
-        this.state.palette = loaded.palette || [];
-        this.state.quotes = loaded.quotes || this.state.quotes;
+        this.state.streak = loaded.streak || 0; this.state.lastDate = loaded.lastDate || '';
+        this.state.sets = loaded.sets || 3; this.state.reps = loaded.reps || 10; this.state.rest = loaded.rest || 30;
+        this.state.workoutLogs = loaded.workoutLogs || {}; this.state.oshiName = loaded.oshiName || 'ME!';
+        this.state.userHeight = loaded.userHeight || 165; this.state.colors = loaded.colors || this.state.colors;
+        this.state.palette = loaded.palette || []; this.state.quotes = loaded.quotes || this.state.quotes;
 
-        localStorage.setItem('swm_streak', this.state.streak);
-        localStorage.setItem('swm_last_date', this.state.lastDate);
-        localStorage.setItem('swm_logs', JSON.stringify(this.state.workoutLogs));
-        localStorage.setItem('swm_oshi_name', this.state.oshiName);
-        localStorage.setItem('swm_height', this.state.userHeight);
-        localStorage.setItem('swm_colors', JSON.stringify(this.state.colors));
-        localStorage.setItem('swm_palette', JSON.stringify(this.state.palette));
-        localStorage.setItem('swm_quotes', JSON.stringify(this.state.quotes));
+        localStorage.setItem('swm_streak', this.state.streak); localStorage.setItem('swm_last_date', this.state.lastDate);
+        localStorage.setItem('swm_logs', JSON.stringify(this.state.workoutLogs)); localStorage.setItem('swm_oshi_name', this.state.oshiName);
+        localStorage.setItem('swm_height', this.state.userHeight); localStorage.setItem('swm_colors', JSON.stringify(this.state.colors));
+        localStorage.setItem('swm_palette', JSON.stringify(this.state.palette)); localStorage.setItem('swm_quotes', JSON.stringify(this.state.quotes));
 
-        this.checkStreak();
-        this.setDefaultMainQuote();
-        this.applySavedCustomizations();
-        this.renderQuoteList();
-        this.syncColorPicker();
+        this.checkStreak(); this.setDefaultMainQuote(); this.applySavedCustomizations();
+        this.renderQuoteList(); this.syncColorPicker();
     },
 
     switchView(viewId) {
         document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
         document.getElementById(viewId).classList.add('active');
-        
         const header = document.getElementById('main-header');
-        if (viewId === 'view-main') header.style.display = 'flex';
-        else header.style.display = 'none';
+        if (viewId === 'view-main') header.style.display = 'flex'; else header.style.display = 'none';
     },
     
     openModal(id) { 
@@ -258,51 +186,30 @@ const app = {
     
     showToast(msg) {
         const toast = document.getElementById('toast-message');
-        toast.innerText = msg;
-        toast.classList.add('show');
+        toast.innerText = msg; toast.classList.add('show');
         setTimeout(() => toast.classList.remove('show'), 2000);
     },
 
     switchTab(tabId) {
-        document.querySelectorAll('.tab-panel').forEach(el => {
-            el.classList.remove('active');
-            el.classList.remove('hidden');
-        });
-        
+        document.querySelectorAll('.tab-panel').forEach(el => { el.classList.remove('active'); el.classList.remove('hidden'); });
         document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
         document.getElementById(tabId).classList.add('active');
-        
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(tabId)) {
-                btn.classList.add('active');
-            }
-        });
-
-        if (tabId === 'tab-sync') {
-            this.renderGoogleButton();
-        }
+        document.querySelectorAll('.tab-btn').forEach(btn => { if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(tabId)) { btn.classList.add('active'); } });
+        if (tabId === 'tab-sync') { this.renderGoogleButton(); }
     },
 
     applySavedCustomizations() {
         document.getElementById('oshi-name-display').innerText = this.state.oshiName;
         document.getElementById('input-oshi-name').value = this.state.oshiName;
         document.getElementById('input-user-height').value = this.state.userHeight;
-        
-        this.updateImageDisplays();
-        this.applyColorsToDOM();
-        this.renderPalette();
+        this.updateImageDisplays(); this.applyColorsToDOM(); this.renderPalette();
     },
 
     saveBasicSettings() {
         const newName = document.getElementById('input-oshi-name').value.trim() || 'ME!';
         const newHeight = parseInt(document.getElementById('input-user-height').value) || 165;
-        
-        this.state.oshiName = newName;
-        this.state.userHeight = newHeight;
-        
-        localStorage.setItem('swm_oshi_name', newName);
-        localStorage.setItem('swm_height', newHeight);
-        
+        this.state.oshiName = newName; this.state.userHeight = newHeight;
+        localStorage.setItem('swm_oshi_name', newName); localStorage.setItem('swm_height', newHeight);
         document.getElementById('oshi-name-display').innerText = newName;
         this.showToast(`기본 설정 저장 완료!`);
     },
@@ -310,19 +217,14 @@ const app = {
     triggerCrop(event) {
         const file = event.target.files[0];
         this.state.cropTarget = document.getElementById('select-img-target').value;
-        
         if (file) {
             const reader = new FileReader();
             reader.onload = (e) => {
                 const cropImage = document.getElementById('crop-image');
                 cropImage.src = e.target.result;
                 document.getElementById('crop-modal').classList.add('active');
-                
                 if (this.state.cropperInstance) this.state.cropperInstance.destroy();
-                
-                this.state.cropperInstance = new Cropper(cropImage, {
-                    viewMode: 1, autoCropArea: 0.9, background: false, responsive: true
-                });
+                this.state.cropperInstance = new Cropper(cropImage, { viewMode: 1, autoCropArea: 0.9, background: false, responsive: true });
                 event.target.value = '';
             };
             reader.readAsDataURL(file);
@@ -331,43 +233,31 @@ const app = {
     
     closeCropModal() {
         document.getElementById('crop-modal').classList.remove('active');
-        if (this.state.cropperInstance) {
-            this.state.cropperInstance.destroy();
-            this.state.cropperInstance = null;
-        }
+        if (this.state.cropperInstance) { this.state.cropperInstance.destroy(); this.state.cropperInstance = null; }
     },
 
     applyCrop() {
         if (!this.state.cropperInstance) return;
         const croppedCanvas = this.state.cropperInstance.getCroppedCanvas();
         if (!croppedCanvas) return;
-        
-        const MAX_WIDTH = 400;
-        let finalCanvas = croppedCanvas;
-        
+        const MAX_WIDTH = 400; let finalCanvas = croppedCanvas;
         if (croppedCanvas.width > MAX_WIDTH) {
             const scaleSize = MAX_WIDTH / croppedCanvas.width;
             finalCanvas = document.createElement('canvas');
-            finalCanvas.width = MAX_WIDTH;
-            finalCanvas.height = croppedCanvas.height * scaleSize;
+            finalCanvas.width = MAX_WIDTH; finalCanvas.height = croppedCanvas.height * scaleSize;
             const ctx = finalCanvas.getContext('2d');
             ctx.drawImage(croppedCanvas, 0, 0, finalCanvas.width, finalCanvas.height);
         }
-        
         const dataUrl = finalCanvas.toDataURL('image/png');
         this.state.images[this.state.cropTarget] = dataUrl;
         localStorage.setItem('swm_images', JSON.stringify(this.state.images));
-        
-        this.updateImageDisplays();
-        this.showToast("이미지가 성공적으로 적용되었습니다! 📸");
-        this.closeCropModal();
+        this.updateImageDisplays(); this.showToast("이미지가 성공적으로 적용되었습니다! 📸"); this.closeCropModal();
     },
     
     updateImageDisplays() {
         const fallback = "image1.png";
         document.getElementById('img-main').src = this.state.images.main || fallback;
         document.getElementById('img-workout').src = this.state.images.workout || this.state.images.main || fallback;
-        
         const finishImg = this.state.images.finish || this.state.images.main || fallback;
         if(document.getElementById('img-finish')) document.getElementById('img-finish').src = finishImg;
         if(document.getElementById('img-finish-screen')) document.getElementById('img-finish-screen').src = finishImg;
@@ -383,9 +273,7 @@ const app = {
         if (!hexColor) return '#111111';
         let hex = hexColor.replace('#', '');
         if (hex.length === 3) hex = hex.split('').map(char => char + char).join('');
-        const r = parseInt(hex.substr(0, 2), 16);
-        const g = parseInt(hex.substr(2, 2), 16);
-        const b = parseInt(hex.substr(4, 2), 16);
+        const r = parseInt(hex.substr(0, 2), 16); const g = parseInt(hex.substr(2, 2), 16); const b = parseInt(hex.substr(4, 2), 16);
         const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
         return (yiq >= 128) ? '#111111' : '#ffffff';
     },
@@ -394,19 +282,14 @@ const app = {
         if (!hexColor) return '59, 130, 246';
         let hex = hexColor.replace('#', '');
         if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
-        const r = parseInt(hex.substr(0, 2), 16);
-        const g = parseInt(hex.substr(2, 2), 16);
-        const b = parseInt(hex.substr(4, 2), 16);
+        const r = parseInt(hex.substr(0, 2), 16); const g = parseInt(hex.substr(2, 2), 16); const b = parseInt(hex.substr(4, 2), 16);
         return `${isNaN(r) ? 59 : r}, ${isNaN(g) ? 130 : g}, ${isNaN(b) ? 246 : b}`;
     },
 
     mixColor(color1, color2, weight) {
-        const h2d = (h) => parseInt(h, 16);
-        const d2h = (d) => d.toString(16).padStart(2, '0');
-        let c1 = color1.replace('#', '');
-        let c2 = color2.replace('#', '');
-        if (c1.length === 3) c1 = c1.split('').map(x=>x+x).join('');
-        if (c2.length === 3) c2 = c2.split('').map(x=>x+x).join('');
+        const h2d = (h) => parseInt(h, 16); const d2h = (d) => d.toString(16).padStart(2, '0');
+        let c1 = color1.replace('#', ''); let c2 = color2.replace('#', '');
+        if (c1.length === 3) c1 = c1.split('').map(x=>x+x).join(''); if (c2.length === 3) c2 = c2.split('').map(x=>x+x).join('');
         const r = Math.round(h2d(c1.substring(0,2)) * weight + h2d(c2.substring(0,2)) * (1 - weight));
         const g = Math.round(h2d(c1.substring(2,4)) * weight + h2d(c2.substring(2,4)) * (1 - weight));
         const b = Math.round(h2d(c1.substring(4,6)) * weight + h2d(c2.substring(4,6)) * (1 - weight));
@@ -418,25 +301,14 @@ const app = {
         let lv1, lv2, lv3, lv4;
         const bg = this.state.colors.element || '#ffffff';
         if (isLight) {
-            lv1 = this.mixColor(baseColor, bg, 0.4);
-            lv2 = baseColor;
-            lv3 = this.mixColor(baseColor, '#000000', 0.8);
-            lv4 = this.mixColor(baseColor, '#000000', 0.6);
+            lv1 = this.mixColor(baseColor, bg, 0.4); lv2 = baseColor; lv3 = this.mixColor(baseColor, '#000000', 0.8); lv4 = this.mixColor(baseColor, '#000000', 0.6);
         } else {
-            lv1 = this.mixColor(baseColor, bg, 0.3);
-            lv2 = this.mixColor(baseColor, bg, 0.6);
-            lv3 = baseColor;
-            lv4 = this.mixColor(baseColor, '#000000', 0.8);
+            lv1 = this.mixColor(baseColor, bg, 0.3); lv2 = this.mixColor(baseColor, bg, 0.6); lv3 = baseColor; lv4 = this.mixColor(baseColor, '#000000', 0.8);
         }
         const root = document.documentElement;
-        root.style.setProperty('--cal-lv1', lv1);
-        root.style.setProperty('--cal-lv2', lv2);
-        root.style.setProperty('--cal-lv3', lv3);
-        root.style.setProperty('--cal-lv4', lv4);
-        root.style.setProperty('--cal-lv1-text', this.getContrast(lv1));
-        root.style.setProperty('--cal-lv2-text', this.getContrast(lv2));
-        root.style.setProperty('--cal-lv3-text', this.getContrast(lv3));
-        root.style.setProperty('--cal-lv4-text', this.getContrast(lv4));
+        root.style.setProperty('--cal-lv1', lv1); root.style.setProperty('--cal-lv2', lv2); root.style.setProperty('--cal-lv3', lv3); root.style.setProperty('--cal-lv4', lv4);
+        root.style.setProperty('--cal-lv1-text', this.getContrast(lv1)); root.style.setProperty('--cal-lv2-text', this.getContrast(lv2));
+        root.style.setProperty('--cal-lv3-text', this.getContrast(lv3)); root.style.setProperty('--cal-lv4-text', this.getContrast(lv4));
     },
 
     applyColor(hexColor) {
@@ -451,55 +323,31 @@ const app = {
             localStorage.setItem('swm_palette', JSON.stringify(this.state.palette));
             this.renderPalette();
         }
-        this.syncColorPicker();
-        this.showToast("색상이 적용되었습니다! 🎨");
+        this.syncColorPicker(); this.showToast("색상이 적용되었습니다! 🎨");
     },
     
     applyColorsToDOM() {
         const root = document.documentElement;
-        root.style.setProperty('--bg-color', this.state.colors.bg);
-        root.style.setProperty('--box-bg', this.state.colors.box);
-        root.style.setProperty('--title-color', this.state.colors.title);
-        root.style.setProperty('--btn-squat', this.state.colors.squat);
+        root.style.setProperty('--bg-color', this.state.colors.bg); root.style.setProperty('--box-bg', this.state.colors.box);
+        root.style.setProperty('--title-color', this.state.colors.title); root.style.setProperty('--btn-squat', this.state.colors.squat);
         root.style.setProperty('--btn-plank', this.state.colors.plank);
-
-        root.style.setProperty('--bg-text', this.getContrast(this.state.colors.bg));
-        root.style.setProperty('--box-text', this.getContrast(this.state.colors.box));
-        root.style.setProperty('--btn-squat-text', this.getContrast(this.state.colors.squat));
-        root.style.setProperty('--btn-plank-text', this.getContrast(this.state.colors.plank));
-        
+        root.style.setProperty('--bg-text', this.getContrast(this.state.colors.bg)); root.style.setProperty('--box-text', this.getContrast(this.state.colors.box));
+        root.style.setProperty('--btn-squat-text', this.getContrast(this.state.colors.squat)); root.style.setProperty('--btn-plank-text', this.getContrast(this.state.colors.plank));
         const elementBg = this.state.colors.element || '#ffffff';
-        root.style.setProperty('--element-bg', elementBg);
-        root.style.setProperty('--element-text', this.getContrast(elementBg));
-        
-        if (this.state.colors.calendar) {
-            this.updateCalendarColors(this.state.colors.calendar);
-        } else {
-            this.updateCalendarColors('#3b82f6');
-        }
+        root.style.setProperty('--element-bg', elementBg); root.style.setProperty('--element-text', this.getContrast(elementBg));
+        if (this.state.colors.calendar) { this.updateCalendarColors(this.state.colors.calendar); } else { this.updateCalendarColors('#3b82f6'); }
     },
     
     renderPalette() {
-        const container = document.getElementById('palette-container');
-        container.innerHTML = '';
-        if(this.state.palette.length === 0) {
-            container.innerHTML = '<span style="font-size:1rem; color:#888;">저장된 팔레트가 없습니다.</span>';
-            return;
-        }
+        const container = document.getElementById('palette-container'); container.innerHTML = '';
+        if(this.state.palette.length === 0) { container.innerHTML = '<span style="font-size:1rem; color:#888;">저장된 팔레트가 없습니다.</span>'; return; }
         this.state.palette.forEach((color, index) => {
-            const wrapper = document.createElement('div');
-            wrapper.className = 'palette-item';
-            const swatch = document.createElement('div');
-            swatch.className = 'color-swatch';
-            swatch.style.backgroundColor = color;
+            const wrapper = document.createElement('div'); wrapper.className = 'palette-item';
+            const swatch = document.createElement('div'); swatch.className = 'color-swatch'; swatch.style.backgroundColor = color;
             swatch.onclick = () => { document.getElementById('color-picker').value = color; this.applyColor(color); };
-            const delBtn = document.createElement('div');
-            delBtn.className = 'palette-del';
-            delBtn.innerText = '✕';
+            const delBtn = document.createElement('div'); delBtn.className = 'palette-del'; delBtn.innerText = '✕';
             delBtn.onclick = (e) => { e.stopPropagation(); this.removePaletteColor(index); };
-            wrapper.appendChild(swatch);
-            wrapper.appendChild(delBtn);
-            container.appendChild(wrapper);
+            wrapper.appendChild(swatch); wrapper.appendChild(delBtn); container.appendChild(wrapper);
         });
     },
     
@@ -522,23 +370,17 @@ const app = {
             this.state.quotes[category].push(newQuote);
             localStorage.setItem('swm_quotes', JSON.stringify(this.state.quotes));
             document.getElementById('input-quote').value = '';
-            this.renderQuoteList();
-            this.showToast("대사가 추가되었습니다! 💬");
+            this.renderQuoteList(); this.showToast("대사가 추가되었습니다! 💬");
         }
     },
     
     renderQuoteList() {
         const category = document.getElementById('select-quote-target').value;
-        const container = document.getElementById('quote-list-container');
-        container.innerHTML = '';
+        const container = document.getElementById('quote-list-container'); container.innerHTML = '';
         const list = this.state.quotes[category];
-        if(list.length === 0) {
-            container.innerHTML = '<div style="font-size:1rem; color:#888;">저장된 대사가 없습니다.</div>';
-            return;
-        }
+        if(list.length === 0) { container.innerHTML = '<div style="font-size:1rem; color:#888;">저장된 대사가 없습니다.</div>'; return; }
         list.forEach((quote, index) => {
-            const item = document.createElement('div');
-            item.className = 'quote-item';
+            const item = document.createElement('div'); item.className = 'quote-item';
             item.innerHTML = `<span>${quote}</span> <button class="quote-del" onclick="app.removeQuote('${category}', ${index})">삭제</button>`;
             container.appendChild(item);
         });
@@ -550,9 +392,7 @@ const app = {
         this.renderQuoteList();
     },
     
-    setMainQuote(text) {
-        document.getElementById('main-speech').innerHTML = text;
-    },
+    setMainQuote(text) { document.getElementById('main-speech').innerHTML = text; },
     setDefaultMainQuote() {
         const bubble = document.getElementById('main-speech');
         bubble.innerHTML = `운동 누적 횟수: <span id="streak-display">${this.state.streak}</span>일`;
@@ -560,11 +400,8 @@ const app = {
     changeMainQuote() {
         this.setMainQuote(this.getRandomQuote('main'));
         if (this.state.mainQuoteTimer) clearTimeout(this.state.mainQuoteTimer);
-        this.state.mainQuoteTimer = setTimeout(() => {
-            this.setDefaultMainQuote();
-        }, 3000);
+        this.state.mainQuoteTimer = setTimeout(() => { this.setDefaultMainQuote(); }, 3000);
     },
-    
     setWorkoutQuote(text) {
         const bubble = document.getElementById('workout-speech');
         bubble.innerText = `"${text}"`;
@@ -602,30 +439,32 @@ const app = {
         this.switchView('view-setup');
     },
 
-    // 💡 변경됨: 버튼 누르는 즉시 권한을 체크하도록 로직 전면 수정
+    // 💡 변경됨: 사용자 제스처(클릭) 즉시 권한을 요청하도록 순서 변경
     initWorkoutProcess() {
+        this.state.isManualMode = false; // 시작할 땐 수동모드 꺼짐으로 초기화
+        
         if (this.state.mode === 'squat') {
-            // 브라우저 권한 요청은 반드시 사용자 클릭 직후 동기적으로 발생해야 합니다.
+            // 버튼 클릭 즉시 권한 묻기! (iOS 보안 정책 우회)
             if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
                 DeviceMotionEvent.requestPermission().then(res => {
                     if (res === 'granted') {
                         this.showSquatGuide();
                     } else {
-                        this.showToast("센서 접근 권한이 거부되었습니다. 😢");
+                        this.showToast("센서 권한이 거부되어 수동 모드로 진행합니다.");
+                        this.startManualMode();
                     }
                 }).catch(err => {
                     console.error(err);
-                    this.showSquatGuide(); // 에러 시 일단 넘어가기
+                    this.showSquatGuide();
                 });
             } else {
-                this.showSquatGuide();
+                this.showSquatGuide(); // Android 등
             }
         } else {
-            this.startWorkout();
+            this.startWorkout(); // 플랭크는 센서 없으니 바로 시작
         }
     },
 
-    // 💡 가이드 모달 띄우기 분리
     showSquatGuide() {
         this.resetHoldState();
         document.getElementById('squat-guide').classList.remove('hidden');
@@ -634,6 +473,14 @@ const app = {
     cancelSquatGuide() {
         this.resetHoldState();
         document.getElementById('squat-guide').classList.add('hidden');
+    },
+
+    // 💡 추가됨: 수동 카운트 모드 활성화 함수
+    startManualMode() {
+        this.resetHoldState();
+        document.getElementById('squat-guide').classList.add('hidden');
+        this.state.isManualMode = true;
+        this.startWorkout();
     },
 
     resetHoldState() {
@@ -692,21 +539,45 @@ const app = {
         if(rightCircle) rightCircle.style.strokeDashoffset = currentOffset;
     },
 
+    // 💡 변경됨: 수동 모드일 때 UI 변경 (버튼 교체, 텍스트 교체)
     startWorkout() {
         this.state.currentSet = 1; this.state.currentProgress = 0;
         this.state.workoutStartTime = Date.now();
         
-        document.getElementById('workout-mode-title').innerText = this.state.mode === 'squat' ? '스쿼트 진행 중' : '플랭크 진행 중';
+        const isSquat = this.state.mode === 'squat';
+        
+        document.getElementById('workout-mode-title').innerText = isSquat 
+            ? (this.state.isManualMode ? '스쿼트 진행 중 (수동)' : '스쿼트 진행 중') 
+            : '플랭크 진행 중';
+            
         document.getElementById('total-sets').innerText = this.state.sets;
-        document.getElementById('workout-sub').innerText = this.state.mode === 'squat' ? `/ ${this.state.reps} 회` : `/ ${this.state.reps} 초`;
-        document.getElementById('btn-pause-workout').innerHTML = "일시정지 ⏸️";
+        
+        // 버튼 및 카운터 토글
+        const btnPause = document.getElementById('btn-pause-workout');
+        const btnManual = document.getElementById('btn-manual-complete');
+        
+        if (this.state.isManualMode) {
+            document.getElementById('workout-count').innerText = "목표";
+            document.getElementById('workout-sub').innerText = ` ${this.state.reps} 회`;
+            btnPause.classList.add('hidden');
+            btnManual.classList.remove('hidden');
+        } else {
+            document.getElementById('workout-count').innerText = "0";
+            document.getElementById('workout-sub').innerText = isSquat ? `/ ${this.state.reps} 회` : `/ ${this.state.reps} 초`;
+            btnPause.classList.remove('hidden');
+            btnManual.classList.add('hidden');
+            btnPause.innerHTML = "일시정지 ⏸️";
+        }
         
         this.updateWorkoutUI();
         this.switchView('view-workout');
         this.setWorkoutQuote(this.getRandomQuote('start'));
 
-        if (this.state.mode === 'squat') this.initSquatSensor();
-        else this.initPlankTimer();
+        // 센서 및 타이머는 수동 모드가 아닐 때만 작동
+        if (!this.state.isManualMode) {
+            if (isSquat) this.initSquatSensor();
+            else this.initPlankTimer();
+        }
     },
 
     confirmQuit() {
@@ -724,6 +595,7 @@ const app = {
 
     quitWorkout() {
         this.state.isWorkingOut = false;
+        this.state.wasWorkingOut = false; 
         clearInterval(this.state.timer);
         
         if (this.state.motionHandler) {
@@ -733,6 +605,8 @@ const app = {
 
         this.closeModal('quit-confirm-modal');
         this.showToast("기록이 초기화되었습니다. 수고하셨어요! 😢");
+        
+        document.getElementById('workout-count').innerText = "0";
         this.setDefaultMainQuote();
         this.switchView('view-main');
     },
@@ -743,11 +617,12 @@ const app = {
     },
 
     updateWorkoutUI() {
-        document.getElementById('workout-count').innerText = this.state.currentProgress;
+        if (!this.state.isManualMode) {
+            document.getElementById('workout-count').innerText = this.state.currentProgress;
+        }
         document.getElementById('current-set').innerText = this.state.currentSet;
     },
 
-    // 💡 변경됨: 센서 민감도 대폭 상향 (기존 delta 2.0 -> 1.2)
     initSquatSensor() {
         this.state.isWorkingOut = true;
         let isDown = false;
@@ -759,6 +634,7 @@ const app = {
         }
 
         const baseG = 9.81; 
+        // 💡 센서 민감도(델타값) 1.2로 하향
         const delta = 1.2 * (165 / this.state.userHeight); 
         const downThreshold = baseG - delta; 
         const upThreshold = baseG + delta;   
@@ -860,11 +736,20 @@ const app = {
     skipRest() {
         clearInterval(this.state.timer);
         this.state.currentSet++; this.state.currentProgress = 0;
+        
+        // 💡 수동 모드이면 진행도를 0으로 바꾸지 않고 텍스트 복구
+        if(this.state.isManualMode) {
+            document.getElementById('workout-count').innerText = "목표";
+        }
+        
         this.updateWorkoutUI();
         this.switchView('view-workout');
         this.state.isWorkingOut = true;
-        if (this.state.mode === 'plank') this.initPlankTimer();
-        else if (this.state.mode === 'squat') this.initSquatSensor(); 
+        
+        if (!this.state.isManualMode) {
+            if (this.state.mode === 'plank') this.initPlankTimer();
+            else if (this.state.mode === 'squat') this.initSquatSensor(); 
+        }
     },
 
     pauseWorkout() {
