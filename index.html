@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Squat With Me</title>
+    <link href="https://fonts.googleapis.com/css2?family=Do+Hyeon&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="top-bar">
+        SQUAT with <span id="oshi-name-display" class="oshi-name">ME!</span>
+    </div>
+
+    <header class="top-header" id="main-header">
+        <button class="brutal-btn icon-btn-wide" onclick="app.openModal('calendar-modal')">📅 기록</button>
+        <button class="icon-btn" onclick="app.openModal('settings-modal')">⚙️</button>
+    </header>
+
+    <main id="view-main" class="view active">
+        <div class="content-wrapper">
+            <div class="character-area">
+                <div id="main-speech" class="speech-bubble brutal-box">
+                    운동 누적 횟수: <span id="streak-display">0</span>일
+                </div>
+                <img id="img-main" src="image1.png" alt="최애 기본" class="character-img float-anim" onclick="app.changeMainQuote()" style="cursor: pointer;">
+            </div>
+        </div>
+
+        <div class="menu-buttons">
+            <button class="brutal-btn btn-squat" onclick="app.showSettings('squat')">
+                <span class="btn-title">스쿼트</span>
+                <span class="btn-sub">(모션 감지)</span>
+            </button>
+            <button class="brutal-btn btn-plank" onclick="app.showSettings('plank')">
+                <span class="btn-title">플랭크</span>
+                <span class="btn-sub">(타이머)</span>
+            </button>
+        </div>
+    </main>
+
+    <main id="view-setup" class="view">
+        <div class="content-wrapper w-100">
+            <div class="brutal-box setup-box w-100">
+                <h2 id="setup-title" class="title-color text-center" style="margin-bottom: 20px;">운동 설정</h2>
+                
+                <div class="counter-group">
+                    <div class="counter-label">세트 수 (최대 10)</div>
+                    <div class="brutal-counter">
+                        <button class="counter-btn" onclick="app.adjustSetting('sets', -1)">-</button>
+                        <div id="disp-sets" class="counter-val">3</div>
+                        <button class="counter-btn" onclick="app.adjustSetting('sets', 1)">+</button>
+                    </div>
+                </div>
+                <div class="counter-group">
+                    <div id="label-reps" class="counter-label">1세트 당 횟수</div>
+                    <div class="brutal-counter">
+                        <button class="counter-btn" onclick="app.adjustSetting('reps', -1)">-</button>
+                        <div id="disp-reps" class="counter-val">10</div>
+                        <button class="counter-btn" onclick="app.adjustSetting('reps', 1)">+</button>
+                    </div>
+                </div>
+                <div class="counter-group" style="margin-bottom: 0;">
+                    <div class="counter-label">휴식 시간 (초)</div>
+                    <div class="brutal-counter">
+                        <button class="counter-btn" onclick="app.adjustSetting('rest', -10)">-</button>
+                        <div id="disp-rest" class="counter-val">30</div>
+                        <button class="counter-btn" onclick="app.adjustSetting('rest', 10)">+</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="brutal-btn btn-gray" onclick="app.switchView('view-main')">뒤로</button>
+            <button id="btn-start-workout" class="brutal-btn btn-squat" onclick="app.initWorkoutProcess()">시작하기 ⚡</button>
+        </div>
+    </main>
+
+    <div id="squat-guide" class="guide-overlay hidden">
+        <button class="close-btn" style="position: absolute; top: 20px; right: 20px; color: #fff; font-size: 2rem; z-index: 201;" onclick="app.cancelSquatGuide()">✕</button>
+        <div class="guide-content text-center">
+            <h2 style="color: var(--btn-squat); margin-bottom: 20px;">준비 자세</h2>
+            <p style="font-size: 1.2rem; line-height: 1.5; margin-bottom: 30px;">
+                스마트폰을 가슴 쪽으로 당겨 밀착하고<br>
+                양쪽 동그라미에 엄지를 <b>3초간 올려주세요!</b>
+            </p>
+            <div class="thumb-container">
+                <div id="thumb-left" class="thumb-btn" 
+                     ontouchstart="app.startHold('left', event)" onmousedown="app.startHold('left', event)" 
+                     ontouchend="app.endHold('left')" onmouseup="app.endHold('left')" onmouseleave="app.endHold('left')">
+                    <svg class="progress-ring">
+                        <circle class="progress-ring__circle" cx="50" cy="50" r="42"></circle>
+                    </svg>
+                    <div class="finger-silhouette">
+                        <svg viewBox="0 0 24 24" width="45" height="45" fill="rgba(255,255,255,0.4)">
+                            <path d="M17,8C17,5.24 14.76,3 12,3S7,5.24 7,8V15H5V8C5,4.14 8.14,1 12,1S19,4.14 19,8V20H17V8M13,9.5V17H11V9.5H13M15.5,10V22H14V10H15.5M8.5,11V19H10V11H8.5Z" />
+                        </svg>
+                    </div>
+                </div>
+                <div id="thumb-right" class="thumb-btn" 
+                     ontouchstart="app.startHold('right', event)" onmousedown="app.startHold('right', event)" 
+                     ontouchend="app.endHold('right')" onmouseup="app.endHold('right')" onmouseleave="app.endHold('right')">
+                    <svg class="progress-ring">
+                        <circle class="progress-ring__circle" cx="50" cy="50" r="42"></circle>
+                    </svg>
+                    <div class="finger-silhouette">
+                        <svg viewBox="0 0 24 24" width="45" height="45" fill="rgba(255,255,255,0.4)">
+                            <path d="M17,8C17,5.24 14.76,3 12,3S7,5.24 7,8V15H5V8C5,4.14 8.14,1 12,1S19,4.14 19,8V20H17V8M13,9.5V17H11V9.5H13M15.5,10V22H14V10H15.5M8.5,11V19H10V11H8.5Z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            <p style="margin-top: 20px; font-size: 0.9rem; color: #aaa;">(두 곳을 동시에 누르고 유지하세요)</p>
+        </div>
+    </div>
+
+    <main id="view-workout" class="view">
+        <div class="content-wrapper w-100">
+            <div class="workout-header text-center" style="margin-bottom: 15px;">
+                <h2 id="workout-mode-title" class="title-color" style="margin:0;">스쿼트 진행 중</h2>
+            </div>
+            
+            <div class="workout-dashboard brutal-box speech-bubble-large">
+                <div class="dash-count">
+                    <span id="workout-count" class="text-huge">0</span>
+                    <span id="workout-sub" class="text-medium">/ 10 회</span>
+                </div>
+                <div class="dash-set">현재 세트: <span id="current-set">1</span> / <span id="total-sets">3</span></div>
+                <div id="workout-speech" class="dash-quote">"응원 대사!"</div>
+            </div>
+
+            <div class="character-area" style="margin-top: 10px; margin-bottom: 0;">
+                <img id="img-workout" src="image1.png" alt="최애 운동중" class="character-img float-anim">
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button id="btn-pause-workout" class="brutal-btn btn-plank" onclick="app.pauseWorkout()">일시정지 ⏸️</button>
+            <button class="brutal-btn btn-gray" onclick="app.confirmQuit()">중단하기 🛑</button>
+        </div>
+    </main>
+
+    <main id="view-rest" class="view">
+        <div class="content-wrapper w-100">
+            <div class="brutal-box text-center w-100">
+                <h2 class="title-color">휴식 시간 ☕</h2>
+                <img id="img-finish" src="image1.png" alt="최애 휴식중" class="character-img float-anim" style="margin-bottom: 20px;">
+                <div class="count-display rest-time" id="rest-timer">30</div>
+                <p>심호흡을 하세요.<br>끝나면 다음 세트가 시작됩니다.</p>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="brutal-btn btn-squat" onclick="app.skipRest()">휴식 건너뛰기 ⏩</button>
+        </div>
+    </main>
+
+    <main id="view-finish" class="view">
+        <div class="content-wrapper w-100">
+            <div class="workout-dashboard brutal-box speech-bubble-large">
+                <h2 id="finish-title" class="title-color" style="margin-bottom:10px;">스쿼트 완료! 🎉</h2>
+                <div id="finish-desc" class="dash-quote" style="line-height: 1.6;">
+                    총 30회 / 3세트<br>
+                    ⏳ 소요 시간: 02분 15초<br><br>
+                    <span id="finish-quote" style="color: var(--title-color);">"고생했어! 최고야!"</span>
+                </div>
+            </div>
+
+            <div class="character-area" style="margin-top: 10px; margin-bottom: 0;">
+                <img id="img-finish-screen" src="image1.png" alt="최애 운동완료" class="character-img float-anim">
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="brutal-btn btn-squat" onclick="app.returnToMain()">메인으로 돌아가기 🏠</button>
+        </div>
+    </main>
+
+    <div id="quit-confirm-modal" class="modal">
+        <div class="modal-content brutal-box text-center">
+            <h2 style="color: #cf2b2b; margin-bottom: 15px;">정말 중단하시겠어요?</h2>
+            <p style="margin-bottom: 20px;">현재 진행 중인 세트 기록이<br>모두 초기화됩니다. 😢</p>
+            <div class="action-buttons" style="margin-top:0;">
+                <button class="brutal-btn btn-gray" onclick="app.cancelQuit()">계속하기</button>
+                <button class="brutal-btn" style="background-color: #ff9999; color: #111;" onclick="app.quitWorkout()">중단하기</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="calendar-modal" class="modal">
+        <div class="modal-content brutal-box scrollable">
+            <div class="modal-header">
+                <h2 class="title-color">📅 운동 기록</h2>
+                <button class="close-btn" onclick="app.closeModal('calendar-modal')">✕</button>
+            </div>
+            
+            <div class="cal-header">
+                <button class="brutal-btn cal-nav-btn" onclick="app.changeMonth(-1)">◀</button>
+                <span id="cal-month-display">2026. 08</span>
+                <button class="brutal-btn cal-nav-btn" onclick="app.changeMonth(1)">▶</button>
+            </div>
+            
+            <div class="calendar-grid" id="calendar-grid"></div>
+            
+            <div class="cal-legend">
+                <span>적음</span>
+                <div class="level-1" style="width:15px; height:15px; border:2px solid var(--black); border-radius:3px;"></div>
+                <div class="level-2" style="width:15px; height:15px; border:2px solid var(--black); border-radius:3px;"></div>
+                <div class="level-3" style="width:15px; height:15px; border:2px solid var(--black); border-radius:3px;"></div>
+                <div class="level-4" style="width:15px; height:15px; border:2px solid var(--black); border-radius:3px;"></div>
+                <span>많음</span>
+            </div>
+
+            <div id="cal-detail-box" class="brutal-box hidden" style="margin-top: 15px; padding: 15px; background: rgba(0,0,0,0.03);">
+                <h3 id="cal-detail-date" style="color: var(--title-color); border-bottom: 2px dashed var(--black); padding-bottom: 5px; margin-bottom: 10px; font-size: 1.2rem;">2026. 08. 04</h3>
+                <ul id="cal-detail-list" style="list-style: none; font-size: 1.1rem; line-height: 1.6; max-height: 120px; overflow-y: auto; padding-right: 5px;"></ul>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-modal" class="modal">
+        <div class="modal-content brutal-box scrollable">
+            <div class="modal-header">
+                <h2 class="title-color">⚙️ 설정 & 꾸미기</h2>
+                <button class="close-btn" onclick="app.closeModal('settings-modal')">✕</button>
+            </div>
+            
+            <div class="modal-tabs">
+                <button class="tab-btn active" onclick="app.switchTab('tab-name')">이름</button>
+                <button class="tab-btn" onclick="app.switchTab('tab-img')">이미지</button>
+                <button class="tab-btn" onclick="app.switchTab('tab-color')">색상</button>
+                <button class="tab-btn" onclick="app.switchTab('tab-quote')">대사</button>
+                <button class="tab-btn" onclick="app.switchTab('tab-sync')">연동</button>
+            </div>
+
+            <div id="tab-name" class="tab-panel active">
+                <div class="form-group">
+                    <label>최애 이름 변경</label>
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" id="input-oshi-name" class="brutal-input w-100" placeholder="예: ME!">
+                        <button class="brutal-btn btn-squat" style="padding: 8px 12px;" onclick="app.saveOshiName()">저장</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-img" class="tab-panel hidden">
+                <div class="form-group">
+                    <label>상황별 이미지 업로드</label>
+                    <p style="font-size:0.85rem; color:var(--box-text); opacity:0.8; margin-bottom:10px;">* 이미지는 보안상 현재 기기에만 보관됩니다.</p>
+                    <select id="select-img-target" class="brutal-input w-100" style="margin-bottom:10px;">
+                        <option value="main">메인 화면 (기본)</option>
+                        <option value="workout">운동 진행 중</option>
+                        <option value="finish">휴식 및 완료</option>
+                    </select>
+                    <input type="file" class="brutal-input w-100" accept="image/*" onchange="app.triggerCrop(event)">
+                </div>
+            </div>
+
+            <div id="tab-color" class="tab-panel hidden">
+                <div class="form-group">
+                    <label>부위별 테마 색상 적용</label>
+                    <select id="select-color-target" class="brutal-input w-100" style="margin-bottom:10px;" onchange="app.syncColorPicker()">
+                        <option value="bg">전체 배경색</option>
+                        <option value="box">박스 배경색</option>
+                        <option value="title">제목 / 텍스트 포인트</option>
+                        <option value="squat">스쿼트 (메인 버튼) 색상</option>
+                        <option value="plank">플랭크 (서브 버튼) 색상</option>
+                        <option value="calendar">달력 잔디 (기본색)</option>
+                        <option value="element">기본 요소 (달력, 탭, 입력창)</option>
+                    </select>
+                    <div style="display:flex; gap:10px; margin-bottom: 15px;">
+                        <input type="color" id="color-picker" class="brutal-input" value="#61b8f2" style="width: 60px; height: 45px; padding: 2px;">
+                        <button class="brutal-btn btn-plank w-100" onclick="app.applyColor()">색상 적용하기</button>
+                    </div>
+                    
+                    <label style="font-size: 0.85rem; border-top: 2px dashed var(--black); padding-top: 10px;">내 저장된 팔레트</label>
+                    <div id="palette-container" class="palette-container"></div>
+                </div>
+            </div>
+
+            <div id="tab-quote" class="tab-panel hidden">
+                <div class="form-group">
+                    <label>상황별 대사 관리</label>
+                    <select id="select-quote-target" class="brutal-input w-100" style="margin-bottom:10px;" onchange="app.renderQuoteList()">
+                        <option value="main">메인 화면 (기본 인사)</option>
+                        <option value="start">운동 시작 시</option>
+                        <option value="cheer">운동 진행 중 응원</option>
+                        <option value="finish">휴식 및 운동 완료</option>
+                    </select>
+                    <div style="display:flex; gap:10px; margin-bottom: 10px;">
+                        <input type="text" id="input-quote" class="brutal-input w-100" placeholder="새로운 대사 입력">
+                        <button class="brutal-btn btn-squat" style="padding: 8px 12px;" onclick="app.addQuote()">추가</button>
+                    </div>
+                    <div class="quote-list" id="quote-list-container"></div>
+                </div>
+            </div>
+            
+            <!-- 💡 추가됨: 동기화(백업/불러오기) 컨트롤 UI -->
+            <div id="tab-sync" class="tab-panel hidden">
+                <div class="form-group text-center">
+                    <label>클라우드 동기화 (무료)</label>
+                    <p style="font-size: 0.95rem; margin-bottom: 15px; color: var(--box-text);">
+                        구글 로그인 후 모든 기록과 설정을 구글 시트에 안전하게 백업하세요.
+                    </p>
+                    
+                    <div id="google-login-btn-container" style="display: flex; justify-content: center; margin-bottom: 10px;"></div>
+                    
+                    <div id="google-user-info" class="brutal-box hidden" style="padding: 12px; font-size: 1.1rem; background: var(--element-bg); color: var(--element-text);">
+                        <img id="google-user-pic" src="" style="width: 45px; height: 45px; border-radius: 50%; margin-bottom: 5px; border: 2px solid var(--black);">
+                        <div id="google-user-name" style="font-weight: bold;"></div>
+                        <div id="google-user-email" style="font-size: 0.85rem; opacity: 0.8; margin-bottom: 15px;"></div>
+                        
+                        <!-- 동기화 액션 버튼 -->
+                        <div style="display:flex; gap:10px; margin-bottom: 10px;">
+                            <button class="brutal-btn btn-squat w-100" style="padding:8px;" onclick="app.backupToCloud()">☁️ 백업하기</button>
+                            <button class="brutal-btn btn-plank w-100" style="padding:8px;" onclick="app.restoreFromCloud()">⬇️ 불러오기</button>
+                        </div>
+                        <button class="brutal-btn btn-gray w-100" style="padding: 6px; font-size:1rem;" onclick="app.logoutGoogle()">연동 해제</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="crop-modal" class="modal">
+        <div class="modal-content brutal-box">
+            <div class="modal-header">
+                <h2 class="title-color">✂️ 이미지 자르기</h2>
+                <button class="close-btn" onclick="app.closeCropModal()">✕</button>
+            </div>
+            
+            <div class="img-container" style="max-height: 50vh; overflow: hidden; margin-bottom: 20px; border: var(--border-thick); border-radius: 8px;">
+                <img id="crop-image" src="" style="max-width: 100%; display: block;">
+            </div>
+            
+            <div class="action-buttons" style="margin-top: 0;">
+                <button class="brutal-btn btn-gray" onclick="app.closeCropModal()">취소</button>
+                <button class="brutal-btn btn-squat" onclick="app.applyCrop()">적용하기</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-message" class="toast brutal-box">메시지</div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
