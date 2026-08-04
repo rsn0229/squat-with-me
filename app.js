@@ -26,7 +26,6 @@ const app = {
         currentCalDate: new Date(),
         oshiName: localStorage.getItem('swm_oshi_name') || 'ME!',
         
-        // 💡 사용자 키(userHeight)를 삭제하고 센서 민감도(1~10) 추가
         sensorSensitivity: parseInt(localStorage.getItem('swm_sensitivity') || '5'),
         baseG: 9.81, 
         calibValues: [],
@@ -206,7 +205,6 @@ const app = {
         document.getElementById('oshi-name-display').innerText = this.state.oshiName;
         document.getElementById('input-oshi-name').value = this.state.oshiName;
         
-        // 💡 슬라이더 값 불러오기 적용
         const senInput = document.getElementById('input-sensor-sensitivity');
         if(senInput) {
             senInput.value = this.state.sensorSensitivity;
@@ -218,7 +216,6 @@ const app = {
 
     saveBasicSettings() {
         const newName = document.getElementById('input-oshi-name').value.trim() || 'ME!';
-        // 💡 슬라이더 저장 로직 적용
         const newSensitivity = parseInt(document.getElementById('input-sensor-sensitivity').value) || 5;
         
         this.state.oshiName = newName; 
@@ -450,13 +447,11 @@ const app = {
         this.switchView('view-setup');
     },
 
-    // 💡 변경됨: 버튼을 누르는 이벤트 안에서만 권한 요청이 정상 작동하도록 순서 변경
     initWorkoutProcess() {
         this.state.isManualMode = false;
         
         if (this.state.mode === 'squat') {
             if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-                // 사용자가 화면을 클릭(터치)한 직후여야 이 팝업이 뜹니다.
                 DeviceMotionEvent.requestPermission().then(res => {
                     if (res === 'granted') {
                         this.showSquatGuide();
@@ -469,19 +464,31 @@ const app = {
                     this.showSquatGuide(); 
                 });
             } else {
-                // Android나 API가 필요 없는 브라우저 환경
                 this.showSquatGuide();
             }
         } else {
-            this.startWorkout(); // 플랭크는 센서 없으니 바로 시작
+            this.startWorkout(); 
         }
+    },
+
+    // 💡 누락되었던 필수 초기화 함수 부활!
+    resetHoldState() {
+        this.state.holdState = { left: false, right: false };
+        this.state.holdProgress = 0;
+        if(this.state.holdTimer) clearInterval(this.state.holdTimer);
+        this.state.holdTimer = null;
+        this.updateGauge();
+        
+        const leftThumb = document.getElementById('thumb-left');
+        const rightThumb = document.getElementById('thumb-right');
+        if(leftThumb) leftThumb.classList.remove('active');
+        if(rightThumb) rightThumb.classList.remove('active');
     },
 
     showSquatGuide() {
         this.resetHoldState();
         document.getElementById('squat-guide').classList.remove('hidden');
         
-        // 💡 영점 조정을 위해 가이드 화면에서 센서 값을 몰래 수집합니다.
         this.state.calibValues = [];
         const self = this;
         this.state.tempMotionHandler = function(event) {
@@ -497,7 +504,6 @@ const app = {
     cancelSquatGuide() {
         this.resetHoldState();
         document.getElementById('squat-guide').classList.add('hidden');
-        // 가이드를 취소하면 수집하던 센서도 끕니다.
         if (this.state.tempMotionHandler) {
             window.removeEventListener('devicemotion', this.state.tempMotionHandler);
             this.state.tempMotionHandler = null;
@@ -523,7 +529,6 @@ const app = {
         
         if (this.state.holdState.left && this.state.holdState.right && !this.state.holdTimer) {
             this.state.holdTimer = setInterval(() => {
-                // 💡 3초에서 2초(2000ms)로 홀드 시간 단축
                 this.state.holdProgress += (100 / (2000 / 50)); 
                 this.updateGauge();
                 
@@ -532,7 +537,6 @@ const app = {
                     this.state.holdProgress = 100;
                     this.updateGauge();
                     
-                    // 💡 2초 동안 수집한 센서 값들의 평균을 내어 내 폰만의 기준 중력값(baseG)으로 설정!
                     if (this.state.calibValues.length > 0) {
                         const sum = this.state.calibValues.reduce((a, b) => a + b, 0);
                         this.state.baseG = sum / this.state.calibValues.length;
@@ -665,7 +669,6 @@ const app = {
             this.state.motionHandler = null;
         }
 
-        // 💡 9.81이라는 고정값 대신, 방금 계산한 내 스마트폰의 기준값(baseG)을 사용합니다!
         const baseG = this.state.baseG; 
         
         const minDelta = 0.5;
