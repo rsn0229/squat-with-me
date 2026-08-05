@@ -130,7 +130,7 @@ const app = {
         this.showToast("☁️ 클라우드에 백업 중...");
 fetch(this.config.gasWebAppUrl, {
     method: 'POST', 
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // 💡 추가된 부분
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify({ action: 'save', tokenPayload: this.state.googleUser, cloudData: JSON.stringify(cloudData) })
 })
         .then(res => res.json())
@@ -144,10 +144,9 @@ fetch(this.config.gasWebAppUrl, {
         if (!this.state.googleUser) return;
         if(confirm("클라우드 데이터를 불러오시겠습니까?\n현재 기기의 기록과 설정이 모두 덮어씌워집니다.")) {
             this.showToast("⬇️ 클라우드에서 불러오는 중...");
-// 불러오기 기능(restoreFromCloud)의 fetch도 동일하게 수정합니다.
 fetch(this.config.gasWebAppUrl, {
     method: 'POST', 
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // 💡 추가된 부분
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify({ action: 'load', tokenPayload: this.state.googleUser })
 })
             .then(res => res.json())
@@ -915,7 +914,6 @@ this.state.motionHandler = function(event) {
     detailBox.classList.remove('hidden');
 },
 
-// 삭제 확인 모달 열기
 askDeleteLog(dateStr, index) {
     this.state.deleteTarget = { date: dateStr, index: index };
     document.getElementById('log-delete-modal').classList.add('active');
@@ -942,24 +940,20 @@ confirmDeleteLog() {
             const sets = parseInt(match[2]);
             log.total -= (reps * sets); 
         }
-
+        
         log.details.splice(index, 1);
-
+        
         if(log.details.length === 0) {
             delete this.state.workoutLogs[date];
         }
     }
-
+    
     localStorage.setItem('swm_logs', JSON.stringify(this.state.workoutLogs));
     this.showToast("기록이 삭제되었습니다.");
     this.closeDeleteLog();
-    this.renderCalendar(); // 달력 잔디 색상 갱신
-    if (!this.state.workoutLogs[date]) {
-        document.getElementById('cal-detail-box').classList.add('hidden');
-        this.state.currentOpenDate = null;
-    } else {
-        this.showDailyLog(date); 
-    }
+    this.renderCalendar(); 
+    this.state.currentOpenDate = null; 
+    this.showDailyLog(date); 
 },
 
     renderCalendar() {
