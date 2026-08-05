@@ -149,8 +149,18 @@ body {
 .text-huge { font-size: 3.5rem; color: var(--title-color); line-height: 1; }
 .text-medium { font-size: 1.3rem; color: var(--box-text); }
 .dash-set { font-size: 1.1rem; color: var(--box-text); background: rgba(0,0,0,0.08); padding: 5px 15px; border-radius: 20px; margin-bottom: 5px; }
-.dash-quote { font-size: 1.1rem; color: var(--box-text); margin-top: 0; font-weight: bold; min-height: 35px; display: flex; align-items: center; justify-content: center; text-align: center; width: 100%; word-break: keep-all; }
-
+.dash-quote { 
+    font-size: 1.1rem; 
+    color: var(--box-text); 
+    margin-top: 0; 
+    font-weight: bold; 
+    min-height: 35px; 
+    display: block; 
+    padding-top: 8px;
+    text-align: center; 
+    width: 100%; 
+    word-break: keep-all; 
+}
 .menu-buttons { display: flex; gap: 15px; width: 100%; margin-top: 10px; }
 .action-buttons { display: flex; gap: 10px; width: 100%; margin-top: 10px; }
 .w-100 { width: 100%; }
