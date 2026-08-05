@@ -6,6 +6,7 @@
     <title>Squat With Me</title>
     <link href="https://fonts.googleapis.com/css2?family=Do+Hyeon&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jscolor/2.5.2/jscolor.min.js"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -264,12 +265,16 @@
                 <div class="form-group">
                     <label>상황별 이미지 업로드</label>
                     <p style="font-size:0.85rem; color:var(--box-text); opacity:0.8; margin-bottom:10px;">* 이미지는 보안상 현재 기기에만 보관됩니다.</p>
-                    <select id="select-img-target" class="brutal-input w-100" style="margin-bottom:10px;">
-                        <option value="main">메인 화면 (기본)</option>
-                        <option value="workout">운동 진행 중</option>
-                        <option value="finish">휴식 및 완료</option>
-                    </select>
-                    <input type="file" class="brutal-input w-100" accept="image/*" onchange="app.triggerCrop(event)">
+                    <!-- index.html의 tab-img 영역의 <input type="file" ...> 부분을 아래와 같이 변경합니다 -->
+<select id="select-img-target" class="brutal-input w-100" style="margin-bottom:10px;" onchange="document.getElementById('img-file-label').innerText = '📂 이미지 파일 선택'; document.getElementById('img-file-label').style.color = 'var(--element-text)';">
+    <option value="main">메인 화면 (기본)</option>
+    <option value="workout">운동 진행 중</option>
+    <option value="finish">휴식 및 완료</option>
+</select>
+
+<!-- 💡 못생긴 파일 선택창은 숨기고(hidden) 예쁜 라벨 버튼을 보여줍니다 -->
+<label for="img-file-input" id="img-file-label" class="brutal-input w-100" style="display:block; text-align:center; cursor:pointer; background:var(--box-bg);">📂 이미지 파일 선택</label>
+<input type="file" id="img-file-input" class="hidden" accept="image/*" onchange="app.triggerCrop(event)">
                 </div>
             </div>
 
@@ -286,7 +291,7 @@
                         <option value="element">기본 요소 (달력, 탭, 입력창)</option>
                     </select>
                     <div style="display:flex; gap:10px; margin-bottom: 15px;">
-                        <input type="color" id="color-picker" class="brutal-input" value="#61b8f2" style="width: 60px; height: 45px; padding: 2px;">
+<input class="brutal-input" id="color-picker" data-jscolor="{format:'hex', closeButton:true}" value="#61b8f2" style="width: 100%; height: 45px; padding: 2px;">
                         <button class="brutal-btn btn-plank w-100" onclick="app.applyColor()">색상 적용하기</button>
                     </div>
                     
