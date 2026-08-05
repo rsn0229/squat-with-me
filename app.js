@@ -31,10 +31,13 @@ const app = {
         calibValues: [],
         tempMotionHandler: null,
         
+    currentOpenDate: null, 
+    deleteTarget: null,
+
         images: JSON.parse(localStorage.getItem('swm_images') || '{"main":"","workout":"","finish":""}'),
         colors: JSON.parse(localStorage.getItem('swm_colors') || '{"bg":"#f5f5f5","box":"#ffffff","title":"#61b8f2","squat":"#fff1a8","plank":"#85c3ed","calendar":"#3b82f6","element":"#ffffff"}'),
         palette: JSON.parse(localStorage.getItem('swm_palette') || '[]'),
-        quotes: JSON.parse(localStorage.getItem('swm_quotes') || '{"main":["오늘도 화이팅!"],"start":["자, 시작해보자고! 🔥"],"cheer":["자세 유지해!","조금만 더! 💦"],"finish":["고생했어! 최고야! ✨"]}'),
+        quotes: JSON.parse(localStorage.getItem('swm_quotes') || '{"main":["오늘도 화이팅!"],"start":["자, 시작해보자고! 🔥"],"cheer":["자세 유지해!","조금만 더! 💦"],"finish":["고생했어✨"]}'),
         
         googleUser: JSON.parse(localStorage.getItem('swm_google_user') || 'null'),
         mainQuoteTimer: null, cropperInstance: null, cropTarget: ''
@@ -289,11 +292,19 @@ if (label) {
         if(document.getElementById('img-finish-screen')) document.getElementById('img-finish-screen').src = finishImg;
     },
 
-    syncColorPicker() {
-        const target = document.getElementById('select-color-target').value;
-        const currentColor = this.state.colors[target] || '#ffffff';
-        document.getElementById('color-picker').value = currentColor;
-    },
+// 1. 부위(target) 변경 시 컬러 피커 색상 동기화 함수 수정
+syncColorPicker() {
+    const target = document.getElementById('select-color-target').value;
+    const currentColor = this.state.colors[target] || '#ffffff';
+    
+    const pickerInput = document.getElementById('color-picker');
+    pickerInput.value = currentColor; // 기본 값 업데이트
+    
+    // 💡 jscolor 라이브러리가 씌워져 있다면, 화면의 색상 칩도 동기화하라는 전용 명령어!
+    if (pickerInput.jscolor) {
+        pickerInput.jscolor.fromString(currentColor);
+    }
+},
 
     getContrast(hexColor) {
         if (!hexColor) return '#111111';
@@ -364,18 +375,36 @@ if (label) {
         if (this.state.colors.calendar) { this.updateCalendarColors(this.state.colors.calendar); } else { this.updateCalendarColors('#3b82f6'); }
     },
     
-    renderPalette() {
-        const container = document.getElementById('palette-container'); container.innerHTML = '';
-        if(this.state.palette.length === 0) { container.innerHTML = '<span style="font-size:1rem; color:#888;">저장된 팔레트가 없습니다.</span>'; return; }
-        this.state.palette.forEach((color, index) => {
-            const wrapper = document.createElement('div'); wrapper.className = 'palette-item';
-            const swatch = document.createElement('div'); swatch.className = 'color-swatch'; swatch.style.backgroundColor = color;
-            swatch.onclick = () => { document.getElementById('color-picker').value = color; this.applyColor(color); };
-            const delBtn = document.createElement('div'); delBtn.className = 'palette-del'; delBtn.innerText = '✕';
-            delBtn.onclick = (e) => { e.stopPropagation(); this.removePaletteColor(index); };
-            wrapper.appendChild(swatch); wrapper.appendChild(delBtn); container.appendChild(wrapper);
-        });
-    },
+// 2. 하단 '내 저장된 팔레트'를 클릭했을 때도 컬러 피커가 바뀌도록 수정
+renderPalette() {
+    const container = document.getElementById('palette-container'); 
+    container.innerHTML = '';
+    
+    if(this.state.palette.length === 0) { 
+        container.innerHTML = '<span style="font-size:1rem; color:#888;">저장된 팔레트가 없습니다.</span>'; 
+        return; 
+    }
+    
+    this.state.palette.forEach((color, index) => {
+        const wrapper = document.createElement('div'); wrapper.className = 'palette-item';
+        const swatch = document.createElement('div'); swatch.className = 'color-swatch'; swatch.style.backgroundColor = color;
+        
+        // 💡 팔레트를 클릭했을 때의 동작 수정
+        swatch.onclick = () => { 
+            const pickerInput = document.getElementById('color-picker');
+            pickerInput.value = color; 
+            if(pickerInput.jscolor) {
+                pickerInput.jscolor.fromString(color); // 팔레트 클릭 시 피커 색상도 갱신!
+            }
+            this.applyColor(color); 
+        };
+        
+        const delBtn = document.createElement('div'); delBtn.className = 'palette-del'; delBtn.innerText = '✕';
+        delBtn.onclick = (e) => { e.stopPropagation(); this.removePaletteColor(index); };
+        
+        wrapper.appendChild(swatch); wrapper.appendChild(delBtn); container.appendChild(wrapper);
+    });
+},
     
     removePaletteColor(index) {
         this.state.palette.splice(index, 1);
@@ -778,7 +807,7 @@ this.state.motionHandler = function(event) {
             document.getElementById('finish-title').innerText = `${modeName} 완료! 🎉`;
             document.getElementById('finish-desc').innerHTML = `
                 총 ${this.state.reps * this.state.sets}${unit} / ${this.state.sets}세트<br>
-                ⏳ 소요 시간: ${m}분 ${s}초<br><br>
+                소요 시간: ${m}분 ${s}초<br><br>
                 <span style="color: var(--title-color);">"${this.getRandomQuote('finish')}"</span>
             `;
             
@@ -863,23 +892,94 @@ this.state.motionHandler = function(event) {
     },
 
     showDailyLog(dateStr) {
-        const detailBox = document.getElementById('cal-detail-box');
-        const dateTitle = document.getElementById('cal-detail-date');
-        const list = document.getElementById('cal-detail-list');
-        const log = this.state.workoutLogs[dateStr];
+    const detailBox = document.getElementById('cal-detail-box');
+    
+    if (this.state.currentOpenDate === dateStr && !detailBox.classList.contains('hidden')) {
+        detailBox.classList.add('hidden');
+        this.state.currentOpenDate = null;
+        return;
+    }
+    
+    this.state.currentOpenDate = dateStr;
+    const list = document.getElementById('cal-detail-list');
+    const log = this.state.workoutLogs[dateStr];
+    
+    // 💡 불필요해진 dateTitle 관련 코드를 모두 삭제했습니다!
+    list.innerHTML = '';
+    
+    if (!log || (typeof log === 'number' && log === 0) || (log.details && log.details.length === 0)) {
+        list.innerHTML = '<li style="color:#888;">운동 기록이 없어요 💦</li>';
+    } else if (typeof log === 'number') {
+        list.innerHTML = `<li style="display:flex; justify-content:space-between; align-items:center;">
+            <span>과거 기록: 총 ${log} 회/초</span>
+            <button class="brutal-btn" style="padding:2px 8px; font-size:0.9rem; background:#ff9999; color:#111;" onclick="app.askDeleteLog('${dateStr}', -1)">✕</button>
+        </li>`;
+    } else {
+        log.details.forEach((detail, index) => { 
+            list.innerHTML += `<li style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                <span>${detail}</span>
+                <button class="brutal-btn" style="padding:2px 8px; font-size:0.9rem; background:#ff9999; color:#111;" onclick="app.askDeleteLog('${dateStr}', ${index})">✕</button>
+            </li>`; 
+        });
+    }
+    detailBox.classList.remove('hidden');
+},
+
+// 삭제 확인 모달 열기
+askDeleteLog(dateStr, index) {
+    this.state.deleteTarget = { date: dateStr, index: index };
+    document.getElementById('log-delete-modal').classList.add('active');
+},
+
+// 삭제 취소 및 모달 닫기
+closeDeleteLog() {
+    document.getElementById('log-delete-modal').classList.remove('active');
+    this.state.deleteTarget = null;
+},
+
+// 실제 삭제 처리하기
+confirmDeleteLog() {
+    if (!this.state.deleteTarget) return;
+    const { date, index } = this.state.deleteTarget;
+    let log = this.state.workoutLogs[date];
+    
+    if (index === -1) {
+        // 구버전 기록일 경우 통째로 삭제
+        delete this.state.workoutLogs[date];
+    } else if (log && log.details) {
+        // 특정 세트 기록 문자열에서 숫자(횟수, 세트)를 찾아내 전체 총합에서 차감
+        const detailStr = log.details[index];
+        const match = detailStr.match(/(\d+)(?:회|초) \/ (\d+)세트/);
         
-        dateTitle.innerText = dateStr.replace(/-/g, '. ');
-        list.innerHTML = '';
-        
-        if (!log || (typeof log === 'number' && log === 0) || (log.details && log.details.length === 0)) {
-            list.innerHTML = '<li style="color:#888;">운동 기록이 없어요 💦</li>';
-        } else if (typeof log === 'number') {
-            list.innerHTML = `<li>과거 기록: 총 ${log} 회/초</li>`;
-        } else {
-            log.details.forEach(detail => { list.innerHTML += `<li>${detail}</li>`; });
+        if(match) {
+            const reps = parseInt(match[1]);
+            const sets = parseInt(match[2]);
+            log.total -= (reps * sets); // 잔디 색상을 위해 누적 횟수 차감
         }
-        detailBox.classList.remove('hidden');
-    },
+        
+        // 목록에서 해당 줄만 제거
+        log.details.splice(index, 1);
+        
+        // 지우고 나서 남은 기록이 하나도 없으면 날짜 데이터 자체를 초기화
+        if(log.details.length === 0) {
+            delete this.state.workoutLogs[date];
+        }
+    }
+    
+    // 저장 및 화면 새로고침
+    localStorage.setItem('swm_logs', JSON.stringify(this.state.workoutLogs));
+    this.showToast("기록이 삭제되었습니다. 🗑️");
+    this.closeDeleteLog();
+    this.renderCalendar(); // 달력 잔디 색상 갱신
+    
+    // 방금 지운 날짜의 기록 상자가 열려있다면 새로고침 하거나 닫기
+    if (!this.state.workoutLogs[date]) {
+        document.getElementById('cal-detail-box').classList.add('hidden');
+        this.state.currentOpenDate = null;
+    } else {
+        this.showDailyLog(date); 
+    }
+},
 
     renderCalendar() {
         const y = this.state.currentCalDate.getFullYear();
