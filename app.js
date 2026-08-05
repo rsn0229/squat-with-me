@@ -442,10 +442,11 @@ removeQuote(category, index) {
 },
     
     setMainQuote(text) { document.getElementById('main-speech').innerHTML = text; },
-    setDefaultMainQuote() {
-        const bubble = document.getElementById('main-speech');
-        bubble.innerHTML = `운동 누적 횟수: <span id="streak-display">${this.state.streak}</span>일`;
-    },
+setDefaultMainQuote() {
+    this.checkStreak();
+    const bubble = document.getElementById('main-speech');
+    bubble.innerHTML = `운동 누적 횟수: <span id="streak-display">${this.state.streak}</span>일`;
+},
     changeMainQuote() {
         this.setMainQuote(this.getRandomQuote('main'));
         if (this.state.mainQuoteTimer) clearTimeout(this.state.mainQuoteTimer);
@@ -798,16 +799,11 @@ this.state.motionHandler = function(event) {
         }
         
         if (this.state.currentSet >= this.state.sets) {
-            this.addWorkoutLog(this.state.mode, this.state.reps, this.state.sets);
-            
-            const today = new Date().toISOString().split('T')[0];
-            if (this.state.lastDate !== today) {
-                this.state.streak++; this.state.lastDate = today;
-                localStorage.setItem('swm_streak', this.state.streak);
-                localStorage.setItem('swm_last_date', today);
-            }
-            
-            const elapsedSeconds = Math.floor((Date.now() - this.state.workoutStartTime) / 1000);
+this.addWorkoutLog(this.state.mode, this.state.reps, this.state.sets);
+
+this.checkStreak(); 
+
+const elapsedSeconds = Math.floor((Date.now() - this.state.workoutStartTime) / 1000);
             const m = String(Math.floor(elapsedSeconds / 60)).padStart(2, '0');
             const s = String(elapsedSeconds % 60).padStart(2, '0');
             
@@ -868,8 +864,15 @@ this.state.motionHandler = function(event) {
         document.getElementById('btn-pause-workout').innerHTML = this.state.isWorkingOut ? "일시정지" : "계속하기";
     },
 
-    checkStreak() { document.getElementById('streak-display').innerText = this.state.streak; },
-
+    checkStreak() { 
+    // 💡 저장된 전체 운동 기록의 '날짜(Key)' 개수를 세어 누적 일수로 확정!
+    this.state.streak = Object.keys(this.state.workoutLogs).length;
+    localStorage.setItem('swm_streak', this.state.streak); // 클라우드 백업용으로 업데이트
+    
+    const display = document.getElementById('streak-display');
+    if (display) display.innerText = this.state.streak; 
+},
+    
     addWorkoutLog(mode, reps, sets) {
         const today = new Date();
         const y = today.getFullYear();
