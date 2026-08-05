@@ -175,7 +175,7 @@
                 <div id="finish-desc" class="dash-quote" style="line-height: 1.5;">
                     총 30회 / 3세트<br>
                     소요 시간: 02분 15초<br><br>
-                    <span id="finish-quote" style="color: var(--title-color);">"고생했어! 최고야!"</span>
+                    <span id="finish-quote" style="color: var(--title-color);">"고생했어!"</span>
                 </div>
             </div>
 
@@ -200,36 +200,50 @@
         </div>
     </div>
 
-    <div id="calendar-modal" class="modal">
-        <div class="modal-content brutal-box scrollable">
-            <div class="modal-header">
-                <h2 class="title-color">📅 운동 기록</h2>
-                <button class="close-btn" onclick="app.closeModal('calendar-modal')">✕</button>
-            </div>
-            
-            <div class="cal-header">
-                <button class="brutal-btn cal-nav-btn" onclick="app.changeMonth(-1)">◀</button>
-                <span id="cal-month-display">2026. 08</span>
-                <button class="brutal-btn cal-nav-btn" onclick="app.changeMonth(1)">▶</button>
-            </div>
-            
-            <div class="calendar-grid" id="calendar-grid"></div>
-            
-            <div class="cal-legend">
-                <span>적음</span>
-                <div class="level-1" style="width:15px; height:15px; border:2px solid var(--black); border-radius:3px;"></div>
-                <div class="level-2" style="width:15px; height:15px; border:2px solid var(--black); border-radius:3px;"></div>
-                <div class="level-3" style="width:15px; height:15px; border:2px solid var(--black); border-radius:3px;"></div>
-                <div class="level-4" style="width:15px; height:15px; border:2px solid var(--black); border-radius:3px;"></div>
-                <span>많음</span>
-            </div>
+<!-- 💡 달력 모달 수정: 전체 스크롤을 막고 내부 리스트만 스크롤되도록 구조 변경 -->
+<div id="calendar-modal" class="modal">
+    <div class="modal-content brutal-box" style="display: flex; flex-direction: column; max-height: 85vh;">
+        <div class="modal-header">
+            <h2 class="title-color">📅 운동 기록</h2>
+            <button class="close-btn" onclick="app.closeModal('calendar-modal')">✕</button>
+        </div>
+        
+        <div class="cal-header">
+            <button class="brutal-btn cal-nav-btn" onclick="app.changeMonth(-1)">◀</button>
+            <span id="cal-month-display">2026. 08</span>
+            <button class="brutal-btn cal-nav-btn" onclick="app.changeMonth(1)">▶</button>
+        </div>
+        
+        <div class="calendar-grid" id="calendar-grid"></div>
+        
+        <div class="cal-legend">
+            <span>적음</span>
+            <div class="level-1" style="width:15px; height:15px; border:2px solid var(--black); border-radius:3px;"></div>
+            <div class="level-2" style="width:15px; height:15px; border:2px solid var(--black); border-radius:3px;"></div>
+            <div class="level-3" style="width:15px; height:15px; border:2px solid var(--black); border-radius:3px;"></div>
+            <div class="level-4" style="width:15px; height:15px; border:2px solid var(--black); border-radius:3px;"></div>
+            <span>많음</span>
+        </div>
 
-            <div id="cal-detail-box" class="brutal-box hidden" style="margin-top: 15px; padding: 15px; background: rgba(0,0,0,0.03);">
-                <h3 id="cal-detail-date" style="color: var(--title-color); border-bottom: 2px dashed var(--black); padding-bottom: 5px; margin-bottom: 10px; font-size: 1.2rem;">2026. 08. 04</h3>
-                <ul id="cal-detail-list" style="list-style: none; font-size: 1.1rem; line-height: 1.6; max-height: 120px; overflow-y: auto; padding-right: 5px;"></ul>
-            </div>
+        <!-- 내부 스크롤 적용 영역 -->
+        <!-- 내부 스크롤 적용 영역 (날짜 제목 h3 삭제됨) -->
+<div id="cal-detail-box" class="brutal-box hidden" style="margin-top: 15px; padding: 15px; background: rgba(0,0,0,0.03); flex: 1; display: flex; flex-direction: column; min-height: 0;">
+    <ul id="cal-detail-list" style="list-style: none; font-size: 1.1rem; line-height: 1.6; overflow-y: auto; padding-right: 5px; flex: 1;"></ul>
+</div>
+    </div>
+</div>
+
+<!-- 💡 기록 삭제 확인용 새 모달 추가 -->
+<div id="log-delete-modal" class="modal" style="z-index: 300;">
+    <div class="modal-content brutal-box text-center">
+        <h2 style="color: #cf2b2b; margin-bottom: 15px;">기록 삭제</h2>
+        <p style="margin-bottom: 20px;">운동 기록을 정말 없앨까요?</p>
+        <div class="action-buttons" style="margin-top:0;">
+            <button class="brutal-btn btn-gray" onclick="app.closeDeleteLog()">취소</button>
+            <button class="brutal-btn" style="background-color: #ff9999; color: #111;" onclick="app.confirmDeleteLog()">삭제하기</button>
         </div>
     </div>
+</div>
 
     <div id="settings-modal" class="modal">
         <div class="modal-content brutal-box scrollable">
@@ -321,7 +335,7 @@
                 <div class="form-group text-center">
                     <label>클라우드 동기화</label>
                     <p style="font-size: 0.95rem; margin-bottom: 15px; color: var(--box-text);">
-                        구글 로그인 후 기록과 설정을 안전하게 백업하세요.
+                        기록과 설정을 안전하게 백업하세요.
                     </p>
                     <div id="google-login-btn-container" style="display: flex; justify-content: center; margin-bottom: 10px;"></div>
                     <div id="google-user-info" class="brutal-box hidden" style="padding: 12px; font-size: 1.1rem; background: var(--element-bg); color: var(--element-text);">
