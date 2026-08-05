@@ -125,9 +125,12 @@ const app = {
         };
 
         this.showToast("☁️ 클라우드에 백업 중...");
-        fetch(this.config.gasWebAppUrl, {
-            method: 'POST', body: JSON.stringify({ action: 'save', tokenPayload: this.state.googleUser, cloudData: JSON.stringify(cloudData) })
-        })
+// 백업하기 기능 수정
+fetch(this.config.gasWebAppUrl, {
+    method: 'POST', 
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // 💡 추가된 부분
+    body: JSON.stringify({ action: 'save', tokenPayload: this.state.googleUser, cloudData: JSON.stringify(cloudData) })
+})
         .then(res => res.json())
         .then(data => {
             if(data.status === 'success') this.showToast("✅ 클라우드 백업 완료!");
@@ -139,9 +142,12 @@ const app = {
         if (!this.state.googleUser) return;
         if(confirm("클라우드 데이터를 불러오시겠습니까?\n현재 기기의 기록과 설정이 모두 덮어씌워집니다.")) {
             this.showToast("⬇️ 클라우드에서 불러오는 중...");
-            fetch(this.config.gasWebAppUrl, {
-                method: 'POST', body: JSON.stringify({ action: 'load', tokenPayload: this.state.googleUser })
-            })
+// 불러오기 기능(restoreFromCloud)의 fetch도 동일하게 수정합니다.
+fetch(this.config.gasWebAppUrl, {
+    method: 'POST', 
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // 💡 추가된 부분
+    body: JSON.stringify({ action: 'load', tokenPayload: this.state.googleUser })
+})
             .then(res => res.json())
             .then(data => {
                 if(data.status === 'success' && data.data) {
@@ -266,6 +272,12 @@ const app = {
         this.state.images[this.state.cropTarget] = dataUrl;
         localStorage.setItem('swm_images', JSON.stringify(this.state.images));
         this.updateImageDisplays(); this.showToast("이미지가 성공적으로 적용되었습니다!"); this.closeCropModal();
+// app.js의 applyCrop() 함수 가장 아랫부분(this.closeCropModal(); 밑)에 다음 코드 추가
+const label = document.getElementById('img-file-label');
+if (label) {
+    label.innerText = "✨ 파일 적용됨!";
+    label.style.color = "var(--title-color)"; // 글자색 강조
+}
     },
     
     updateImageDisplays() {
@@ -399,6 +411,14 @@ const app = {
             container.appendChild(item);
         });
     },
+
+// 대사 삭제 기능 새로 추가
+removeQuote(category, index) {
+    this.state.quotes[category].splice(index, 1);
+    localStorage.setItem('swm_quotes', JSON.stringify(this.state.quotes));
+    this.renderQuoteList();
+    this.showToast("대사가 삭제되었습니다!");
+},
     
     setMainQuote(text) { document.getElementById('main-speech').innerHTML = text; },
     setDefaultMainQuote() {
@@ -682,26 +702,32 @@ const app = {
         const debounceMs = 800; 
 
         const self = this;
-        this.state.motionHandler = function(event) {
-            if (!self.state.isWorkingOut || self.state.isManualMode) return;
-            
-            const acc = event.accelerationIncludingGravity;
-            if (!acc) return;
+        // initSquatSensor() 내부 수정
+let phase = 0; // 0: 대기, 1: 내려감, 2: 올라옴 (💡 상태 추적 변수 추가)
 
-            const mag = Math.sqrt(Math.pow(acc.x, 2) + Math.pow(acc.y, 2) + Math.pow(acc.z, 2));
-            
-            if (mag < downThreshold) {
-                isDown = true; 
-            }
-            if (isDown && mag > upThreshold) { 
-                const now = Date.now();
-                if (now - lastCountTime > debounceMs) {
-                    isDown = false; 
-                    lastCountTime = now;
-                    self.countUp(); 
-                }
-            }
-        };
+this.state.motionHandler = function(event) {
+    if (!self.state.isWorkingOut || self.state.isManualMode) return;
+    
+    const acc = event.accelerationIncludingGravity;
+    if (!acc) return;
+
+    const mag = Math.sqrt(Math.pow(acc.x, 2) + Math.pow(acc.y, 2) + Math.pow(acc.z, 2));
+    
+    // 💡 3단계 물리 감지 로직 적용
+    if (phase === 0 && mag < downThreshold) {
+        phase = 1; // 1단계: 앉기 시작 (중력 감소)
+    } else if (phase === 1 && mag > upThreshold) {
+        phase = 2; // 2단계: 일어서기 시작 (강한 가속)
+    } else if (phase === 2 && Math.abs(mag - baseG) < minDelta) { 
+        // 3단계: 제자리(안정 상태)로 돌아옴
+        const now = Date.now();
+        if (now - lastCountTime > debounceMs) {
+            phase = 0; // 다시 대기 상태로
+            lastCountTime = now;
+            self.countUp(); // 카운트 증가! ✨
+        }
+    }
+};
 
         window.addEventListener('devicemotion', this.state.motionHandler); 
     },
