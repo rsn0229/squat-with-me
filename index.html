@@ -200,7 +200,6 @@
         </div>
     </div>
 
-<!-- 💡 달력 모달 수정: 전체 스크롤을 막고 내부 리스트만 스크롤되도록 구조 변경 -->
 <div id="calendar-modal" class="modal">
     <div class="modal-content brutal-box" style="display: flex; flex-direction: column; max-height: 85vh;">
         <div class="modal-header">
@@ -225,15 +224,12 @@
             <span>많음</span>
         </div>
 
-        <!-- 내부 스크롤 적용 영역 -->
-        <!-- 내부 스크롤 적용 영역 (날짜 제목 h3 삭제됨) -->
 <div id="cal-detail-box" class="brutal-box hidden" style="margin-top: 15px; padding: 15px; background: rgba(0,0,0,0.03); flex: 1; display: flex; flex-direction: column; min-height: 0;">
     <ul id="cal-detail-list" style="list-style: none; font-size: 1.1rem; line-height: 1.6; overflow-y: auto; padding-right: 5px; flex: 1;"></ul>
-</div>
+        </div>
     </div>
 </div>
 
-<!-- 💡 기록 삭제 확인용 새 모달 추가 -->
 <div id="log-delete-modal" class="modal" style="z-index: 300;">
     <div class="modal-content brutal-box text-center">
         <h2 style="color: #cf2b2b; margin-bottom: 15px;">기록 삭제</h2>
@@ -286,7 +282,6 @@
     <option value="finish">휴식 및 완료</option>
 </select>
 
-<!-- 💡 못생긴 파일 선택창은 숨기고(hidden) 예쁜 라벨 버튼을 보여줍니다 -->
 <label for="img-file-input" id="img-file-label" class="brutal-input w-100" style="display:block; text-align:center; cursor:pointer; background:var(--box-bg);">📂 이미지 파일 선택</label>
 <input type="file" id="img-file-input" class="hidden" accept="image/*" onchange="app.triggerCrop(event)">
                 </div>
