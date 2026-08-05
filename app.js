@@ -488,29 +488,49 @@ removeQuote(category, index) {
         this.switchView('view-setup');
     },
 
-    initWorkoutProcess() {
-        this.state.isManualMode = false;
-        
-        if (this.state.mode === 'squat') {
-            if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-                DeviceMotionEvent.requestPermission().then(res => {
-                    if (res === 'granted') {
-                        this.showSquatGuide();
-                    } else {
-                        this.showToast("센서 권한이 거부되어 수동 모드로 진행합니다.");
-                        this.startManualMode();
-                    }
-                }).catch(err => {
-                    console.error("센서 권한 에러:", err);
-                    this.showSquatGuide(); 
-                });
-            } else {
-                this.showSquatGuide();
-            }
+initWorkoutProcess() {
+    this.state.isManualMode = false;
+    
+    if (this.state.mode === 'squat') {
+        if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+            DeviceMotionEvent.requestPermission().then(res => {
+                if (res === 'granted') {
+                    this.showSquatGuide();
+                } else {
+                    this.showToast("센서 권한이 거부되어 수동 모드로 진행합니다.");
+                    this.startManualMode();
+                }
+            }).catch(err => {
+                console.error("센서 권한 에러:", err);
+                this.showSquatGuide(); 
+            });
         } else {
+            this.showSquatGuide();
+        }
+    } else {
+        this.showPlankGuide(); 
+    }
+},
+
+showPlankGuide() {
+    const guide = document.getElementById('plank-guide');
+    const countDisplay = document.getElementById('plank-countdown');
+    let timeLeft = 5; 
+    
+    countDisplay.innerText = timeLeft;
+    guide.classList.remove('hidden'); 
+
+    const countdownTimer = setInterval(() => {
+        timeLeft--;
+        if (timeLeft > 0) {
+            countDisplay.innerText = timeLeft;
+        } else {
+            clearInterval(countdownTimer);
+            guide.classList.add('hidden');
             this.startWorkout(); 
         }
-    },
+    }, 1000);
+},
 
     resetHoldState() {
         this.state.holdState = { left: false, right: false };
