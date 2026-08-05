@@ -128,7 +128,6 @@ const app = {
         };
 
         this.showToast("☁️ 클라우드에 백업 중...");
-// 백업하기 기능 수정
 fetch(this.config.gasWebAppUrl, {
     method: 'POST', 
     headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // 💡 추가된 부분
@@ -275,11 +274,10 @@ fetch(this.config.gasWebAppUrl, {
         this.state.images[this.state.cropTarget] = dataUrl;
         localStorage.setItem('swm_images', JSON.stringify(this.state.images));
         this.updateImageDisplays(); this.showToast("이미지가 성공적으로 적용되었습니다!"); this.closeCropModal();
-// app.js의 applyCrop() 함수 가장 아랫부분(this.closeCropModal(); 밑)에 다음 코드 추가
 const label = document.getElementById('img-file-label');
 if (label) {
     label.innerText = "✨ 파일 적용됨!";
-    label.style.color = "var(--title-color)"; // 글자색 강조
+    label.style.color = "var(--title-color)";
 }
     },
     
@@ -292,15 +290,13 @@ if (label) {
         if(document.getElementById('img-finish-screen')) document.getElementById('img-finish-screen').src = finishImg;
     },
 
-// 1. 부위(target) 변경 시 컬러 피커 색상 동기화 함수 수정
 syncColorPicker() {
     const target = document.getElementById('select-color-target').value;
     const currentColor = this.state.colors[target] || '#ffffff';
     
     const pickerInput = document.getElementById('color-picker');
-    pickerInput.value = currentColor; // 기본 값 업데이트
-    
-    // 💡 jscolor 라이브러리가 씌워져 있다면, 화면의 색상 칩도 동기화하라는 전용 명령어!
+    pickerInput.value = currentColor;
+
     if (pickerInput.jscolor) {
         pickerInput.jscolor.fromString(currentColor);
     }
@@ -374,8 +370,7 @@ syncColorPicker() {
         root.style.setProperty('--element-bg', elementBg); root.style.setProperty('--element-text', this.getContrast(elementBg));
         if (this.state.colors.calendar) { this.updateCalendarColors(this.state.colors.calendar); } else { this.updateCalendarColors('#3b82f6'); }
     },
-    
-// 2. 하단 '내 저장된 팔레트'를 클릭했을 때도 컬러 피커가 바뀌도록 수정
+
 renderPalette() {
     const container = document.getElementById('palette-container'); 
     container.innerHTML = '';
@@ -388,13 +383,12 @@ renderPalette() {
     this.state.palette.forEach((color, index) => {
         const wrapper = document.createElement('div'); wrapper.className = 'palette-item';
         const swatch = document.createElement('div'); swatch.className = 'color-swatch'; swatch.style.backgroundColor = color;
-        
-        // 💡 팔레트를 클릭했을 때의 동작 수정
+
         swatch.onclick = () => { 
             const pickerInput = document.getElementById('color-picker');
             pickerInput.value = color; 
             if(pickerInput.jscolor) {
-                pickerInput.jscolor.fromString(color); // 팔레트 클릭 시 피커 색상도 갱신!
+                pickerInput.jscolor.fromString(color); 
             }
             this.applyColor(color); 
         };
@@ -441,7 +435,6 @@ renderPalette() {
         });
     },
 
-// 대사 삭제 기능 새로 추가
 removeQuote(category, index) {
     this.state.quotes[category].splice(index, 1);
     localStorage.setItem('swm_quotes', JSON.stringify(this.state.quotes));
@@ -741,19 +734,17 @@ this.state.motionHandler = function(event) {
     if (!acc) return;
 
     const mag = Math.sqrt(Math.pow(acc.x, 2) + Math.pow(acc.y, 2) + Math.pow(acc.z, 2));
-    
-    // 💡 3단계 물리 감지 로직 적용
+
     if (phase === 0 && mag < downThreshold) {
-        phase = 1; // 1단계: 앉기 시작 (중력 감소)
+        phase = 1; 
     } else if (phase === 1 && mag > upThreshold) {
-        phase = 2; // 2단계: 일어서기 시작 (강한 가속)
+        phase = 2; 
     } else if (phase === 2 && Math.abs(mag - baseG) < minDelta) { 
-        // 3단계: 제자리(안정 상태)로 돌아옴
         const now = Date.now();
         if (now - lastCountTime > debounceMs) {
-            phase = 0; // 다시 대기 상태로
+            phase = 0; 
             lastCountTime = now;
-            self.countUp(); // 카운트 증가! ✨
+            self.countUp(); 
         }
     }
 };
@@ -903,8 +894,7 @@ this.state.motionHandler = function(event) {
     this.state.currentOpenDate = dateStr;
     const list = document.getElementById('cal-detail-list');
     const log = this.state.workoutLogs[dateStr];
-    
-    // 💡 불필요해진 dateTitle 관련 코드를 모두 삭제했습니다!
+
     list.innerHTML = '';
     
     if (!log || (typeof log === 'number' && log === 0) || (log.details && log.details.length === 0)) {
@@ -931,48 +921,39 @@ askDeleteLog(dateStr, index) {
     document.getElementById('log-delete-modal').classList.add('active');
 },
 
-// 삭제 취소 및 모달 닫기
 closeDeleteLog() {
     document.getElementById('log-delete-modal').classList.remove('active');
     this.state.deleteTarget = null;
 },
 
-// 실제 삭제 처리하기
 confirmDeleteLog() {
     if (!this.state.deleteTarget) return;
     const { date, index } = this.state.deleteTarget;
     let log = this.state.workoutLogs[date];
     
     if (index === -1) {
-        // 구버전 기록일 경우 통째로 삭제
         delete this.state.workoutLogs[date];
     } else if (log && log.details) {
-        // 특정 세트 기록 문자열에서 숫자(횟수, 세트)를 찾아내 전체 총합에서 차감
         const detailStr = log.details[index];
         const match = detailStr.match(/(\d+)(?:회|초) \/ (\d+)세트/);
         
         if(match) {
             const reps = parseInt(match[1]);
             const sets = parseInt(match[2]);
-            log.total -= (reps * sets); // 잔디 색상을 위해 누적 횟수 차감
+            log.total -= (reps * sets); 
         }
-        
-        // 목록에서 해당 줄만 제거
+
         log.details.splice(index, 1);
-        
-        // 지우고 나서 남은 기록이 하나도 없으면 날짜 데이터 자체를 초기화
+
         if(log.details.length === 0) {
             delete this.state.workoutLogs[date];
         }
     }
-    
-    // 저장 및 화면 새로고침
+
     localStorage.setItem('swm_logs', JSON.stringify(this.state.workoutLogs));
-    this.showToast("기록이 삭제되었습니다. 🗑️");
+    this.showToast("기록이 삭제되었습니다.");
     this.closeDeleteLog();
     this.renderCalendar(); // 달력 잔디 색상 갱신
-    
-    // 방금 지운 날짜의 기록 상자가 열려있다면 새로고침 하거나 닫기
     if (!this.state.workoutLogs[date]) {
         document.getElementById('cal-detail-box').classList.add('hidden');
         this.state.currentOpenDate = null;
