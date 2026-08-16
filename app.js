@@ -31,8 +31,11 @@ const app = {
         calibValues: [],
         tempMotionHandler: null,
         
-    currentOpenDate: null, 
-    deleteTarget: null,
+        currentOpenDate: null, 
+        deleteTarget: null,
+
+        // 💡 새롭게 추가된 '기타 종목' 리스트! 로컬 스토리지에 자동 저장됩니다.
+        customNames: JSON.parse(localStorage.getItem('swm_custom_names') || '[]'),
 
         images: JSON.parse(localStorage.getItem('swm_images') || '{"main":"","workout":"","finish":""}'),
         colors: JSON.parse(localStorage.getItem('swm_colors') || '{"bg":"#f5f5f5","box":"#ffffff","title":"#61b8f2","squat":"#fff1a8","plank":"#85c3ed","calendar":"#3b82f6","element":"#ffffff"}'),
@@ -124,15 +127,16 @@ const app = {
         const cloudData = {
             streak: this.state.streak, lastDate: this.state.lastDate, sets: this.state.sets, reps: this.state.reps, rest: this.state.rest,
             workoutLogs: this.state.workoutLogs, oshiName: this.state.oshiName, sensorSensitivity: this.state.sensorSensitivity, 
-            colors: this.state.colors, palette: this.state.palette, quotes: this.state.quotes
+            colors: this.state.colors, palette: this.state.palette, quotes: this.state.quotes,
+            customNames: this.state.customNames // 💡 클라우드 백업에 새 기록 종목도 포함시킵니다.
         };
 
         this.showToast("☁️ 클라우드에 백업 중...");
-fetch(this.config.gasWebAppUrl, {
-    method: 'POST', 
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action: 'save', tokenPayload: this.state.googleUser, cloudData: JSON.stringify(cloudData) })
-})
+        fetch(this.config.gasWebAppUrl, {
+            method: 'POST', 
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'save', tokenPayload: this.state.googleUser, cloudData: JSON.stringify(cloudData) })
+        })
         .then(res => res.json())
         .then(data => {
             if(data.status === 'success') this.showToast("✅ 클라우드 백업 완료!");
@@ -144,11 +148,11 @@ fetch(this.config.gasWebAppUrl, {
         if (!this.state.googleUser) return;
         if(confirm("클라우드 데이터를 불러오시겠습니까?\n현재 기기의 기록과 설정이 모두 덮어씌워집니다.")) {
             this.showToast("⬇️ 클라우드에서 불러오는 중...");
-fetch(this.config.gasWebAppUrl, {
-    method: 'POST', 
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action: 'load', tokenPayload: this.state.googleUser })
-})
+            fetch(this.config.gasWebAppUrl, {
+                method: 'POST', 
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'load', tokenPayload: this.state.googleUser })
+            })
             .then(res => res.json())
             .then(data => {
                 if(data.status === 'success' && data.data) {
@@ -166,11 +170,13 @@ fetch(this.config.gasWebAppUrl, {
         this.state.workoutLogs = loaded.workoutLogs || {}; this.state.oshiName = loaded.oshiName || 'ME!';
         this.state.sensorSensitivity = loaded.sensorSensitivity || 5; this.state.colors = loaded.colors || this.state.colors;
         this.state.palette = loaded.palette || []; this.state.quotes = loaded.quotes || this.state.quotes;
+        this.state.customNames = loaded.customNames || []; // 복구에도 포함!
 
         localStorage.setItem('swm_streak', this.state.streak); localStorage.setItem('swm_last_date', this.state.lastDate);
         localStorage.setItem('swm_logs', JSON.stringify(this.state.workoutLogs)); localStorage.setItem('swm_oshi_name', this.state.oshiName);
         localStorage.setItem('swm_sensitivity', this.state.sensorSensitivity); localStorage.setItem('swm_colors', JSON.stringify(this.state.colors));
         localStorage.setItem('swm_palette', JSON.stringify(this.state.palette)); localStorage.setItem('swm_quotes', JSON.stringify(this.state.quotes));
+        localStorage.setItem('swm_custom_names', JSON.stringify(this.state.customNames));
 
         this.checkStreak(); this.setDefaultMainQuote(); this.applySavedCustomizations();
         this.renderQuoteList(); this.syncColorPicker();
@@ -189,6 +195,13 @@ fetch(this.config.gasWebAppUrl, {
             this.state.currentCalDate = new Date();
             document.getElementById('cal-detail-box').classList.add('hidden');
             this.renderCalendar();
+        } else if (id === 'custom-record-modal') {
+            // 커스텀 기록 모달을 열 때마다 필드를 초기화하고, 드롭박스 이력을 최신화합니다.
+            this.renderCustomHistory();
+            document.getElementById('custom-name').value = '';
+            document.getElementById('custom-reps').value = '';
+            document.getElementById('custom-sets').value = '';
+            document.getElementById('custom-time').value = '';
         }
     },
     
@@ -273,11 +286,12 @@ fetch(this.config.gasWebAppUrl, {
         this.state.images[this.state.cropTarget] = dataUrl;
         localStorage.setItem('swm_images', JSON.stringify(this.state.images));
         this.updateImageDisplays(); this.showToast("이미지가 성공적으로 적용되었습니다!"); this.closeCropModal();
-const label = document.getElementById('img-file-label');
-if (label) {
-    label.innerText = "✨ 파일 적용됨!";
-    label.style.color = "var(--title-color)";
-}
+        
+        const label = document.getElementById('img-file-label');
+        if (label) {
+            label.innerText = "✨ 파일 적용됨!";
+            label.style.color = "var(--title-color)";
+        }
     },
     
     updateImageDisplays() {
@@ -289,17 +303,17 @@ if (label) {
         if(document.getElementById('img-finish-screen')) document.getElementById('img-finish-screen').src = finishImg;
     },
 
-syncColorPicker() {
-    const target = document.getElementById('select-color-target').value;
-    const currentColor = this.state.colors[target] || '#ffffff';
-    
-    const pickerInput = document.getElementById('color-picker');
-    pickerInput.value = currentColor;
-
-    if (pickerInput.jscolor) {
-        pickerInput.jscolor.fromString(currentColor);
-    }
-},
+    syncColorPicker() {
+        const target = document.getElementById('select-color-target').value;
+        const currentColor = this.state.colors[target] || '#ffffff';
+        
+        const pickerInput = document.getElementById('color-picker');
+        pickerInput.value = currentColor;
+        
+        if (pickerInput.jscolor) {
+            pickerInput.jscolor.fromString(currentColor);
+        }
+    },
 
     getContrast(hexColor) {
         if (!hexColor) return '#111111';
@@ -369,35 +383,35 @@ syncColorPicker() {
         root.style.setProperty('--element-bg', elementBg); root.style.setProperty('--element-text', this.getContrast(elementBg));
         if (this.state.colors.calendar) { this.updateCalendarColors(this.state.colors.calendar); } else { this.updateCalendarColors('#3b82f6'); }
     },
-
-renderPalette() {
-    const container = document.getElementById('palette-container'); 
-    container.innerHTML = '';
     
-    if(this.state.palette.length === 0) { 
-        container.innerHTML = '<span style="font-size:1rem; color:#888;">저장된 팔레트가 없습니다.</span>'; 
-        return; 
-    }
-    
-    this.state.palette.forEach((color, index) => {
-        const wrapper = document.createElement('div'); wrapper.className = 'palette-item';
-        const swatch = document.createElement('div'); swatch.className = 'color-swatch'; swatch.style.backgroundColor = color;
-
-        swatch.onclick = () => { 
-            const pickerInput = document.getElementById('color-picker');
-            pickerInput.value = color; 
-            if(pickerInput.jscolor) {
-                pickerInput.jscolor.fromString(color); 
-            }
-            this.applyColor(color); 
-        };
+    renderPalette() {
+        const container = document.getElementById('palette-container'); 
+        container.innerHTML = '';
         
-        const delBtn = document.createElement('div'); delBtn.className = 'palette-del'; delBtn.innerText = '✕';
-        delBtn.onclick = (e) => { e.stopPropagation(); this.removePaletteColor(index); };
+        if(this.state.palette.length === 0) { 
+            container.innerHTML = '<span style="font-size:1rem; color:#888;">저장된 팔레트가 없습니다.</span>'; 
+            return; 
+        }
         
-        wrapper.appendChild(swatch); wrapper.appendChild(delBtn); container.appendChild(wrapper);
-    });
-},
+        this.state.palette.forEach((color, index) => {
+            const wrapper = document.createElement('div'); wrapper.className = 'palette-item';
+            const swatch = document.createElement('div'); swatch.className = 'color-swatch'; swatch.style.backgroundColor = color;
+            
+            swatch.onclick = () => { 
+                const pickerInput = document.getElementById('color-picker');
+                pickerInput.value = color; 
+                if(pickerInput.jscolor) {
+                    pickerInput.jscolor.fromString(color); 
+                }
+                this.applyColor(color); 
+            };
+            
+            const delBtn = document.createElement('div'); delBtn.className = 'palette-del'; delBtn.innerText = '✕';
+            delBtn.onclick = (e) => { e.stopPropagation(); this.removePaletteColor(index); };
+            
+            wrapper.appendChild(swatch); wrapper.appendChild(delBtn); container.appendChild(wrapper);
+        });
+    },
     
     removePaletteColor(index) {
         this.state.palette.splice(index, 1);
@@ -434,19 +448,18 @@ renderPalette() {
         });
     },
 
-removeQuote(category, index) {
-    this.state.quotes[category].splice(index, 1);
-    localStorage.setItem('swm_quotes', JSON.stringify(this.state.quotes));
-    this.renderQuoteList();
-    this.showToast("대사가 삭제되었습니다!");
-},
+    removeQuote(category, index) {
+        this.state.quotes[category].splice(index, 1);
+        localStorage.setItem('swm_quotes', JSON.stringify(this.state.quotes));
+        this.renderQuoteList();
+        this.showToast("대사가 삭제되었습니다!");
+    },
     
     setMainQuote(text) { document.getElementById('main-speech').innerHTML = text; },
-setDefaultMainQuote() {
-    this.checkStreak();
-    const bubble = document.getElementById('main-speech');
-    bubble.innerHTML = `운동 누적 횟수: <span id="streak-display">${this.state.streak}</span>일`;
-},
+    setDefaultMainQuote() {
+        const bubble = document.getElementById('main-speech');
+        bubble.innerHTML = `운동 누적 횟수: <span id="streak-display">${this.state.streak}</span>일`;
+    },
     changeMainQuote() {
         this.setMainQuote(this.getRandomQuote('main'));
         if (this.state.mainQuoteTimer) clearTimeout(this.state.mainQuoteTimer);
@@ -489,49 +502,49 @@ setDefaultMainQuote() {
         this.switchView('view-setup');
     },
 
-initWorkoutProcess() {
-    this.state.isManualMode = false;
-    
-    if (this.state.mode === 'squat') {
-        if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-            DeviceMotionEvent.requestPermission().then(res => {
-                if (res === 'granted') {
-                    this.showSquatGuide();
-                } else {
-                    this.showToast("센서 권한이 거부되어 수동 모드로 진행합니다.");
-                    this.startManualMode();
-                }
-            }).catch(err => {
-                console.error("센서 권한 에러:", err);
-                this.showSquatGuide(); 
-            });
+    initWorkoutProcess() {
+        this.state.isManualMode = false;
+        
+        if (this.state.mode === 'squat') {
+            if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+                DeviceMotionEvent.requestPermission().then(res => {
+                    if (res === 'granted') {
+                        this.showSquatGuide();
+                    } else {
+                        this.showToast("센서 권한이 거부되어 수동 모드로 진행합니다.");
+                        this.startManualMode();
+                    }
+                }).catch(err => {
+                    console.error("센서 권한 에러:", err);
+                    this.showSquatGuide(); 
+                });
+            } else {
+                this.showSquatGuide();
+            }
         } else {
-            this.showSquatGuide();
+            this.showPlankGuide(); 
         }
-    } else {
-        this.showPlankGuide(); 
-    }
-},
+    },
 
-showPlankGuide() {
-    const guide = document.getElementById('plank-guide');
-    const countDisplay = document.getElementById('plank-countdown');
-    let timeLeft = 5; 
-    
-    countDisplay.innerText = timeLeft;
-    guide.classList.remove('hidden'); 
-
-    const countdownTimer = setInterval(() => {
-        timeLeft--;
-        if (timeLeft > 0) {
-            countDisplay.innerText = timeLeft;
-        } else {
-            clearInterval(countdownTimer);
-            guide.classList.add('hidden');
-            this.startWorkout(); 
-        }
-    }, 1000);
-},
+    showPlankGuide() {
+        const guide = document.getElementById('plank-guide');
+        const countDisplay = document.getElementById('plank-countdown');
+        let timeLeft = 3; 
+        
+        countDisplay.innerText = timeLeft;
+        guide.classList.remove('hidden'); 
+        
+        const countdownTimer = setInterval(() => {
+            timeLeft--;
+            if (timeLeft > 0) {
+                countDisplay.innerText = timeLeft;
+            } else {
+                clearInterval(countdownTimer); 
+                guide.classList.add('hidden'); 
+                this.startWorkout(); 
+            }
+        }, 1000);
+    },
 
     resetHoldState() {
         this.state.holdState = { left: false, right: false };
@@ -744,30 +757,29 @@ showPlankGuide() {
         const debounceMs = 800; 
 
         const self = this;
-        // initSquatSensor() 내부 수정
-let phase = 0; // 0: 대기, 1: 내려감, 2: 올라옴 (💡 상태 추적 변수 추가)
+        let phase = 0; 
 
-this.state.motionHandler = function(event) {
-    if (!self.state.isWorkingOut || self.state.isManualMode) return;
-    
-    const acc = event.accelerationIncludingGravity;
-    if (!acc) return;
+        this.state.motionHandler = function(event) {
+            if (!self.state.isWorkingOut || self.state.isManualMode) return;
+            
+            const acc = event.accelerationIncludingGravity;
+            if (!acc) return;
 
-    const mag = Math.sqrt(Math.pow(acc.x, 2) + Math.pow(acc.y, 2) + Math.pow(acc.z, 2));
-
-    if (phase === 0 && mag < downThreshold) {
-        phase = 1; 
-    } else if (phase === 1 && mag > upThreshold) {
-        phase = 2; 
-    } else if (phase === 2 && Math.abs(mag - baseG) < minDelta) { 
-        const now = Date.now();
-        if (now - lastCountTime > debounceMs) {
-            phase = 0; 
-            lastCountTime = now;
-            self.countUp(); 
-        }
-    }
-};
+            const mag = Math.sqrt(Math.pow(acc.x, 2) + Math.pow(acc.y, 2) + Math.pow(acc.z, 2));
+            
+            if (phase === 0 && mag < downThreshold) {
+                phase = 1; 
+            } else if (phase === 1 && mag > upThreshold) {
+                phase = 2; 
+            } else if (phase === 2 && Math.abs(mag - baseG) < minDelta) { 
+                const now = Date.now();
+                if (now - lastCountTime > debounceMs) {
+                    phase = 0; 
+                    lastCountTime = now;
+                    self.countUp(); 
+                }
+            }
+        };
 
         window.addEventListener('devicemotion', this.state.motionHandler); 
     },
@@ -799,11 +811,16 @@ this.state.motionHandler = function(event) {
         }
         
         if (this.state.currentSet >= this.state.sets) {
-this.addWorkoutLog(this.state.mode, this.state.reps, this.state.sets);
-
-this.checkStreak(); 
-
-const elapsedSeconds = Math.floor((Date.now() - this.state.workoutStartTime) / 1000);
+            this.addWorkoutLog(this.state.mode, this.state.reps, this.state.sets);
+            
+            const today = new Date().toISOString().split('T')[0];
+            if (this.state.lastDate !== today) {
+                this.state.streak++; this.state.lastDate = today;
+                localStorage.setItem('swm_streak', this.state.streak);
+                localStorage.setItem('swm_last_date', today);
+            }
+            
+            const elapsedSeconds = Math.floor((Date.now() - this.state.workoutStartTime) / 1000);
             const m = String(Math.floor(elapsedSeconds / 60)).padStart(2, '0');
             const s = String(elapsedSeconds % 60).padStart(2, '0');
             
@@ -864,15 +881,8 @@ const elapsedSeconds = Math.floor((Date.now() - this.state.workoutStartTime) / 1
         document.getElementById('btn-pause-workout').innerHTML = this.state.isWorkingOut ? "일시정지" : "계속하기";
     },
 
-    checkStreak() { 
-    // 💡 저장된 전체 운동 기록의 '날짜(Key)' 개수를 세어 누적 일수로 확정!
-    this.state.streak = Object.keys(this.state.workoutLogs).length;
-    localStorage.setItem('swm_streak', this.state.streak); // 클라우드 백업용으로 업데이트
-    
-    const display = document.getElementById('streak-display');
-    if (display) display.innerText = this.state.streak; 
-},
-    
+    checkStreak() { document.getElementById('streak-display').innerText = this.state.streak; },
+
     addWorkoutLog(mode, reps, sets) {
         const today = new Date();
         const y = today.getFullYear();
@@ -898,6 +908,99 @@ const elapsedSeconds = Math.floor((Date.now() - this.state.workoutStartTime) / 1
         localStorage.setItem('swm_logs', JSON.stringify(this.state.workoutLogs));
     },
 
+    // 💡 새롭게 추가한: 기타 운동 기록 저장 함수
+    saveCustomRecord() {
+        const nameInput = document.getElementById('custom-name').value.trim();
+        const reps = document.getElementById('custom-reps').value;
+        const sets = document.getElementById('custom-sets').value;
+        const time = document.getElementById('custom-time').value;
+
+        // 필수 조건 1: 종목 이름 유무 검증
+        if (!nameInput) {
+            this.showToast("종목 이름을 입력해주세요! 💦");
+            return;
+        }
+
+        // 필수 조건 2: 세 항목 중 최소 1개 입력 검증
+        if (!reps && !sets && !time) {
+            this.showToast("횟수, 세트, 시간 중 최소 1개는 입력해주세요! 💦");
+            return;
+        }
+
+        // 종목 이력 저장 (최신 순 배열 상단 추가)
+        if (!this.state.customNames.includes(nameInput)) {
+            this.state.customNames.unshift(nameInput);
+            if (this.state.customNames.length > 30) this.state.customNames.pop(); // 너무 길어지지 않게 관리
+            localStorage.setItem('swm_custom_names', JSON.stringify(this.state.customNames));
+        }
+
+        // 디테일 기록용 문자열 생성
+        let detailParts = [];
+        if (reps) detailParts.push(`${reps}회`);
+        if (sets) detailParts.push(`${sets}세트`);
+        if (time) detailParts.push(`${time}분`);
+        const detailStr = `${nameInput} / ${detailParts.join(' ')}`;
+
+        // 잔디 채색을 위한 가상의 달력 총합 수치(Total) 산출
+        let mockTotal = 0;
+        if (reps && sets) mockTotal += parseInt(reps) * parseInt(sets);
+        else if (reps) mockTotal += parseInt(reps);
+        else if (time) mockTotal += parseInt(time) * 5; // 분당 가상 운동량 5
+        else if (sets) mockTotal += parseInt(sets) * 10;
+        
+        if (mockTotal === 0) mockTotal = 10; // 최소 잔디 점수 부여
+
+        const today = new Date();
+        const y = today.getFullYear();
+        const m = String(today.getMonth() + 1).padStart(2, '0');
+        const d = String(today.getDate()).padStart(2, '0');
+        const dateStr = `${y}-${m}-${d}`;
+        
+        let currentLog = this.state.workoutLogs[dateStr];
+        if (typeof currentLog === 'number') {
+            currentLog = { total: currentLog, details: [`과거 기록: 총 ${currentLog} 회/초`] };
+        } else if (!currentLog) {
+            currentLog = { total: 0, details: [] };
+        }
+        
+        currentLog.total += mockTotal;
+        currentLog.details.push(detailStr);
+        
+        this.state.workoutLogs[dateStr] = currentLog;
+        localStorage.setItem('swm_logs', JSON.stringify(this.state.workoutLogs));
+
+        this.showToast("기타 운동 기록이 추가되었습니다! ✨");
+        this.closeModal('custom-record-modal');
+        this.renderCalendar(); // 달력 즉시 갱신
+        
+        if (this.state.googleUser && this.config.gasWebAppUrl) {
+            this.backupToCloud(true); 
+        }
+    },
+
+    // 💡 기타 운동 기록 - 드롭박스 렌더링 함수
+    renderCustomHistory() {
+        const select = document.getElementById('custom-name-history');
+        select.innerHTML = '';
+        
+        if (this.state.customNames.length === 0) {
+            select.innerHTML = '<option value="">-이전 기록 없음-</option>';
+        } else {
+            select.innerHTML = '<option value="">-최근 종목 선택-</option>';
+            this.state.customNames.forEach(name => {
+                select.innerHTML += `<option value="${name}">${name}</option>`;
+            });
+        }
+    },
+
+    // 💡 기타 운동 기록 - 드롭박스 선택 시 인풋창에 자동 입력
+    selectCustomHistory() {
+        const select = document.getElementById('custom-name-history');
+        if (select.value) {
+            document.getElementById('custom-name').value = select.value;
+        }
+    },
+
     changeMonth(offset) {
         this.state.currentCalDate.setMonth(this.state.currentCalDate.getMonth() + offset);
         document.getElementById('cal-detail-box').classList.add('hidden');
@@ -905,79 +1008,80 @@ const elapsedSeconds = Math.floor((Date.now() - this.state.workoutStartTime) / 1
     },
 
     showDailyLog(dateStr) {
-    const detailBox = document.getElementById('cal-detail-box');
-    
-    if (this.state.currentOpenDate === dateStr && !detailBox.classList.contains('hidden')) {
-        detailBox.classList.add('hidden');
-        this.state.currentOpenDate = null;
-        return;
-    }
-    
-    this.state.currentOpenDate = dateStr;
-    const list = document.getElementById('cal-detail-list');
-    const log = this.state.workoutLogs[dateStr];
-
-    list.innerHTML = '';
-    
-    if (!log || (typeof log === 'number' && log === 0) || (log.details && log.details.length === 0)) {
-        list.innerHTML = '<li style="color:#888;">운동 기록이 없어요 💦</li>';
-    } else if (typeof log === 'number') {
-        list.innerHTML = `<li style="display:flex; justify-content:space-between; align-items:center;">
-            <span>과거 기록: 총 ${log} 회/초</span>
-            <button class="brutal-btn" style="padding:2px 8px; font-size:0.9rem; background:#ff9999; color:#111;" onclick="app.askDeleteLog('${dateStr}', -1)">✕</button>
-        </li>`;
-    } else {
-        log.details.forEach((detail, index) => { 
-            list.innerHTML += `<li style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-                <span>${detail}</span>
-                <button class="brutal-btn" style="padding:2px 8px; font-size:0.9rem; background:#ff9999; color:#111;" onclick="app.askDeleteLog('${dateStr}', ${index})">✕</button>
-            </li>`; 
-        });
-    }
-    detailBox.classList.remove('hidden');
-},
-
-askDeleteLog(dateStr, index) {
-    this.state.deleteTarget = { date: dateStr, index: index };
-    document.getElementById('log-delete-modal').classList.add('active');
-},
-
-closeDeleteLog() {
-    document.getElementById('log-delete-modal').classList.remove('active');
-    this.state.deleteTarget = null;
-},
-
-confirmDeleteLog() {
-    if (!this.state.deleteTarget) return;
-    const { date, index } = this.state.deleteTarget;
-    let log = this.state.workoutLogs[date];
-    
-    if (index === -1) {
-        delete this.state.workoutLogs[date];
-    } else if (log && log.details) {
-        const detailStr = log.details[index];
-        const match = detailStr.match(/(\d+)(?:회|초) \/ (\d+)세트/);
+        const detailBox = document.getElementById('cal-detail-box');
         
-        if(match) {
-            const reps = parseInt(match[1]);
-            const sets = parseInt(match[2]);
-            log.total -= (reps * sets); 
+        if (this.state.currentOpenDate === dateStr && !detailBox.classList.contains('hidden')) {
+            detailBox.classList.add('hidden');
+            this.state.currentOpenDate = null;
+            return;
         }
         
-        log.details.splice(index, 1);
+        this.state.currentOpenDate = dateStr;
+        const list = document.getElementById('cal-detail-list');
+        const log = this.state.workoutLogs[dateStr];
         
-        if(log.details.length === 0) {
+        list.innerHTML = '';
+        
+        if (!log || (typeof log === 'number' && log === 0) || (log.details && log.details.length === 0)) {
+            list.innerHTML = '<li style="color:#888;">운동 기록이 없어요 💦</li>';
+        } else if (typeof log === 'number') {
+            list.innerHTML = `<li style="display:flex; justify-content:space-between; align-items:center;">
+                <span>과거 기록: 총 ${log} 회/초</span>
+                <button class="brutal-btn" style="padding:2px 8px; font-size:0.9rem; background:#ff9999; color:#111;" onclick="app.askDeleteLog('${dateStr}', -1)">✕</button>
+            </li>`;
+        } else {
+            log.details.forEach((detail, index) => { 
+                list.innerHTML += `<li style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                    <span>${detail}</span>
+                    <button class="brutal-btn" style="padding:2px 8px; font-size:0.9rem; background:#ff9999; color:#111;" onclick="app.askDeleteLog('${dateStr}', ${index})">✕</button>
+                </li>`; 
+            });
+        }
+        detailBox.classList.remove('hidden');
+    },
+
+    askDeleteLog(dateStr, index) {
+        this.state.deleteTarget = { date: dateStr, index: index };
+        document.getElementById('log-delete-modal').classList.add('active');
+    },
+
+    closeDeleteLog() {
+        document.getElementById('log-delete-modal').classList.remove('active');
+        this.state.deleteTarget = null;
+    },
+
+    confirmDeleteLog() {
+        if (!this.state.deleteTarget) return;
+        const { date, index } = this.state.deleteTarget;
+        let log = this.state.workoutLogs[date];
+        
+        if (index === -1) {
             delete this.state.workoutLogs[date];
+        } else if (log && log.details) {
+            const detailStr = log.details[index];
+            const match = detailStr.match(/(\d+)(?:회|초) \/ (\d+)세트/);
+            
+            if(match) {
+                const reps = parseInt(match[1]);
+                const sets = parseInt(match[2]);
+                log.total -= (reps * sets); 
+            }
+            
+            log.details.splice(index, 1);
+            
+            if(log.details.length === 0) {
+                delete this.state.workoutLogs[date];
+            }
         }
-    }
-    
-    localStorage.setItem('swm_logs', JSON.stringify(this.state.workoutLogs));
-    this.showToast("기록이 삭제되었습니다.");
-    this.closeDeleteLog();
-    this.renderCalendar(); 
-    this.state.currentOpenDate = null; 
-    this.showDailyLog(date); 
-},
+        
+        localStorage.setItem('swm_logs', JSON.stringify(this.state.workoutLogs));
+        this.showToast("기록이 삭제되었습니다. 🗑️");
+        this.closeDeleteLog();
+        this.renderCalendar(); 
+        
+        this.state.currentOpenDate = null; 
+        this.showDailyLog(date); 
+    },
 
     renderCalendar() {
         const y = this.state.currentCalDate.getFullYear();
