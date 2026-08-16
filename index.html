@@ -6,7 +6,7 @@
     <title>Squat With Me</title>
     <link href="https://fonts.googleapis.com/css2?family=Do+Hyeon&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jscolor/2.5.2/jscolor.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jscolor/2.5.2/jscolor.min.js"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -29,7 +29,10 @@
     </div>
 
     <header class="top-header" id="main-header">
-        <button class="brutal-btn icon-btn-wide" onclick="app.openModal('calendar-modal')">📅 기록</button>
+        <div style="display: flex; gap: 8px;">
+            <button class="brutal-btn icon-btn-wide" onclick="app.openModal('calendar-modal')">📅 기록</button>
+            <button class="brutal-btn icon-btn-wide" style="padding: 8px 12px; font-weight: bold; font-family: sans-serif;" onclick="app.openModal('custom-record-modal')">+</button>
+        </div>
         <button class="icon-btn" onclick="app.openModal('settings-modal')">⚙️</button>
     </header>
 
@@ -37,7 +40,7 @@
         <div class="content-wrapper">
             <div class="character-area">
                 <div id="main-speech" class="speech-bubble brutal-box">
-                    운동 누적일수: <span id="streak-display">0</span>일
+                    운동 누적 횟수: <span id="streak-display">0</span>일
                 </div>
                 <img id="img-main" src="image1.png" alt="최애 기본" class="character-img float-anim" onclick="app.changeMainQuote()" style="cursor: pointer;">
             </div>
@@ -126,17 +129,17 @@
         </div>
     </div>
 
-<div id="plank-guide" class="guide-overlay hidden" style="z-index: 201;">
-    <div class="guide-content text-center">
-        <h2 style="color: var(--btn-plank); margin-bottom: 20px;">준비 자세</h2>
-        <p style="font-size: 1.2rem; line-height: 1.5; margin-bottom: 30px; color: #fff;">
-            평평한 바닥에 스마트폰을 두고<br>
-            플랭크 자세를 취해주세요!
-        </p>
-        <div id="plank-countdown" class="count-display" style="font-size: 6rem; color: #fff;">5</div>
+    <div id="plank-guide" class="guide-overlay hidden" style="z-index: 201;">
+        <div class="guide-content text-center">
+            <h2 style="color: var(--btn-plank); margin-bottom: 20px;">준비 자세</h2>
+            <p style="font-size: 1.2rem; line-height: 1.5; margin-bottom: 30px; color: #fff;">
+                평평한 바닥에 스마트폰을 두고<br>
+                플랭크 자세를 취해주세요!
+            </p>
+            <div id="plank-countdown" class="count-display" style="font-size: 6rem; color: #fff;">3</div>
+        </div>
     </div>
-</div>
-    
+
     <main id="view-workout" class="view">
         <div class="content-wrapper w-100">
             <div class="workout-header text-center" style="margin-bottom: 5px;">
@@ -211,46 +214,74 @@
         </div>
     </div>
 
-<div id="calendar-modal" class="modal">
-    <div class="modal-content brutal-box" style="display: flex; flex-direction: column; max-height: 85vh;">
-        <div class="modal-header">
-            <h2 class="title-color">📅 운동 기록</h2>
-            <button class="close-btn" onclick="app.closeModal('calendar-modal')">✕</button>
-        </div>
-        
-        <div class="cal-header">
-            <button class="brutal-btn cal-nav-btn" onclick="app.changeMonth(-1)">◀</button>
-            <span id="cal-month-display">2026. 08</span>
-            <button class="brutal-btn cal-nav-btn" onclick="app.changeMonth(1)">▶</button>
-        </div>
-        
-        <div class="calendar-grid" id="calendar-grid"></div>
-        
-        <div class="cal-legend">
-            <span>적음</span>
-            <div class="level-1" style="width:15px; height:15px; border:2px solid var(--black); border-radius:3px;"></div>
-            <div class="level-2" style="width:15px; height:15px; border:2px solid var(--black); border-radius:3px;"></div>
-            <div class="level-3" style="width:15px; height:15px; border:2px solid var(--black); border-radius:3px;"></div>
-            <div class="level-4" style="width:15px; height:15px; border:2px solid var(--black); border-radius:3px;"></div>
-            <span>많음</span>
-        </div>
+    <div id="calendar-modal" class="modal">
+        <div class="modal-content brutal-box" style="display: flex; flex-direction: column; max-height: 85vh;">
+            <div class="modal-header">
+                <h2 class="title-color">📅 운동 기록</h2>
+                <button class="close-btn" onclick="app.closeModal('calendar-modal')">✕</button>
+            </div>
+            
+            <div class="cal-header">
+                <button class="brutal-btn cal-nav-btn" onclick="app.changeMonth(-1)">◀</button>
+                <span id="cal-month-display">2026. 08</span>
+                <button class="brutal-btn cal-nav-btn" onclick="app.changeMonth(1)">▶</button>
+            </div>
+            
+            <div class="calendar-grid" id="calendar-grid"></div>
+            
+            <div class="cal-legend">
+                <span>적음</span>
+                <div class="level-1" style="width:15px; height:15px; border:2px solid var(--black); border-radius:3px;"></div>
+                <div class="level-2" style="width:15px; height:15px; border:2px solid var(--black); border-radius:3px;"></div>
+                <div class="level-3" style="width:15px; height:15px; border:2px solid var(--black); border-radius:3px;"></div>
+                <div class="level-4" style="width:15px; height:15px; border:2px solid var(--black); border-radius:3px;"></div>
+                <span>많음</span>
+            </div>
 
-<div id="cal-detail-box" class="brutal-box hidden" style="margin-top: 15px; padding: 15px; background: rgba(0,0,0,0.03); flex: 1; display: flex; flex-direction: column; min-height: 0;">
-    <ul id="cal-detail-list" style="list-style: none; font-size: 1.1rem; line-height: 1.6; overflow-y: auto; padding-right: 5px; flex: 1;"></ul>
+            <div id="cal-detail-box" class="brutal-box hidden" style="margin-top: 15px; padding: 15px; background: rgba(0,0,0,0.03); flex: 1; display: flex; flex-direction: column; min-height: 0;">
+                <ul id="cal-detail-list" style="list-style: none; font-size: 1.1rem; line-height: 1.6; overflow-y: auto; padding-right: 5px; flex: 1;"></ul>
+            </div>
         </div>
     </div>
-</div>
 
-<div id="log-delete-modal" class="modal" style="z-index: 300;">
-    <div class="modal-content brutal-box text-center">
-        <h2 style="color: #cf2b2b; margin-bottom: 15px;">기록 삭제</h2>
-        <p style="margin-bottom: 20px;">운동 기록을 정말 없앨까요?</p>
-        <div class="action-buttons" style="margin-top:0;">
-            <button class="brutal-btn btn-gray" onclick="app.closeDeleteLog()">취소</button>
-            <button class="brutal-btn" style="background-color: #ff9999; color: #111;" onclick="app.confirmDeleteLog()">삭제하기</button>
+    <div id="custom-record-modal" class="modal" style="z-index: 150;">
+        <div class="modal-content brutal-box">
+            <div class="modal-header">
+                <h2 class="title-color">➕ 기타 운동 기록</h2>
+                <button class="close-btn" onclick="app.closeModal('custom-record-modal')">✕</button>
+            </div>
+            
+            <div class="form-group" style="background: none; padding: 0;">
+                <label>종목 이름 (필수)</label>
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <input type="text" id="custom-name" class="brutal-input" style="flex: 1; width: 50%;" placeholder="예: 실내 자전거">
+                    <select id="custom-name-history" class="brutal-input" style="flex: 1; width: 50%;" onchange="app.selectCustomHistory()">
+                        <option value="">-이전 기록 없음-</option>
+                    </select>
+                </div>
+                
+                <label>상세 기록 (최소 1개 필수)</label>
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <input type="number" id="custom-reps" class="brutal-input" style="flex: 1; width: 33%;" placeholder="횟수" min="1">
+                    <input type="number" id="custom-sets" class="brutal-input" style="flex: 1; width: 33%;" placeholder="세트" min="1">
+                    <input type="number" id="custom-time" class="brutal-input" style="flex: 1; width: 33%;" placeholder="시간(분)" min="1">
+                </div>
+                
+                <button class="brutal-btn btn-squat w-100" style="padding: 12px; font-weight: bold;" onclick="app.saveCustomRecord()">기록 추가하기</button>
+            </div>
         </div>
     </div>
-</div>
+
+    <div id="log-delete-modal" class="modal" style="z-index: 300;">
+        <div class="modal-content brutal-box text-center">
+            <h2 style="color: #cf2b2b; margin-bottom: 15px;">기록 삭제</h2>
+            <p style="margin-bottom: 20px;">운동 기록을 정말 없앨까요?</p>
+            <div class="action-buttons" style="margin-top:0;">
+                <button class="brutal-btn btn-gray" onclick="app.closeDeleteLog()">취소</button>
+                <button class="brutal-btn" style="background-color: #ff9999; color: #111;" onclick="app.confirmDeleteLog()">삭제하기</button>
+            </div>
+        </div>
+    </div>
 
     <div id="settings-modal" class="modal">
         <div class="modal-content brutal-box scrollable">
@@ -267,6 +298,7 @@
                 <button class="tab-btn" onclick="app.switchTab('tab-sync')">연동</button>
             </div>
 
+            <!-- 기본, 이미지, 색상, 대사, 연동 탭 패널 (기존과 동일) -->
             <div id="tab-name" class="tab-panel active">
                 <div class="form-group">
                     <label>최애 이름 변경</label>
@@ -286,15 +318,14 @@
                 <div class="form-group">
                     <label>상황별 이미지 업로드</label>
                     <p style="font-size:0.85rem; color:var(--box-text); opacity:0.8; margin-bottom:10px;">* 이미지는 보안상 현재 기기에만 보관됩니다.</p>
-                    <!-- index.html의 tab-img 영역의 <input type="file" ...> 부분을 아래와 같이 변경합니다 -->
-<select id="select-img-target" class="brutal-input w-100" style="margin-bottom:10px;" onchange="document.getElementById('img-file-label').innerText = '📂 이미지 파일 선택'; document.getElementById('img-file-label').style.color = 'var(--element-text)';">
-    <option value="main">메인 화면 (기본)</option>
-    <option value="workout">운동 진행 중</option>
-    <option value="finish">휴식 및 완료</option>
-</select>
+                    <select id="select-img-target" class="brutal-input w-100" style="margin-bottom:10px;" onchange="document.getElementById('img-file-label').innerText = '📂 이미지 파일 선택'; document.getElementById('img-file-label').style.color = 'var(--element-text)';">
+                        <option value="main">메인 화면 (기본)</option>
+                        <option value="workout">운동 진행 중</option>
+                        <option value="finish">휴식 및 완료</option>
+                    </select>
 
-<label for="img-file-input" id="img-file-label" class="brutal-input w-100" style="display:block; text-align:center; cursor:pointer; background:var(--box-bg);">📂 이미지 파일 선택</label>
-<input type="file" id="img-file-input" class="hidden" accept="image/*" onchange="app.triggerCrop(event)">
+                    <label for="img-file-input" id="img-file-label" class="brutal-input w-100" style="display:block; text-align:center; cursor:pointer; background:var(--box-bg);">📂 이미지 파일 선택</label>
+                    <input type="file" id="img-file-input" class="hidden" accept="image/*" onchange="app.triggerCrop(event)">
                 </div>
             </div>
 
@@ -311,7 +342,7 @@
                         <option value="element">기본 요소 (달력, 탭, 입력창)</option>
                     </select>
                     <div style="display:flex; gap:10px; margin-bottom: 15px;">
-<input class="brutal-input" id="color-picker" data-jscolor="{format:'hex', closeButton:true}" value="#61b8f2" style="width: 100%; height: 45px; padding: 2px;">
+                        <input class="brutal-input" id="color-picker" data-jscolor="{format:'hex', closeButton:true}" value="#61b8f2" style="width: 100%; height: 45px; padding: 2px;">
                         <button class="brutal-btn btn-plank w-100" onclick="app.applyColor()">색상 적용하기</button>
                     </div>
                     
