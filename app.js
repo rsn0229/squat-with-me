@@ -1050,7 +1050,7 @@ const app = {
         this.state.deleteTarget = null;
     },
 
-    confirmDeleteLog() {
+confirmDeleteLog() {
         if (!this.state.deleteTarget) return;
         const { date, index } = this.state.deleteTarget;
         let log = this.state.workoutLogs[date];
@@ -1059,23 +1059,40 @@ const app = {
             delete this.state.workoutLogs[date];
         } else if (log && log.details) {
             const detailStr = log.details[index];
-            const match = detailStr.match(/(\d+)(?:회|초) \/ (\d+)세트/);
+            let scoreToSubtract = 0;
             
-            if(match) {
-                const reps = parseInt(match[1]);
-                const sets = parseInt(match[2]);
-                log.total -= (reps * sets); 
+            const oldMatch = detailStr.match(/(\d+)(?:회|초) \/ (\d+)세트/);
+            
+            if (oldMatch) {
+                scoreToSubtract = parseInt(oldMatch[1]) * parseInt(oldMatch[2]);
+            } else {
+
+                const parts = detailStr.split(' / ');
+                if (parts.length > 1) {
+                    const info = parts[1];
+                    let r = 0, s = 0, t = 0;
+                    
+                    const rMatch = info.match(/(\d+)회/); if(rMatch) r = parseInt(rMatch[1]);
+                    const sMatch = info.match(/(\d+)세트/); if(sMatch) s = parseInt(sMatch[1]);
+                    const tMatch = info.match(/(\d+)분/); if(tMatch) t = parseInt(tMatch[1]);
+
+                    if (r && s) scoreToSubtract = r * s;
+                    else if (r) scoreToSubtract = r;
+                    else if (t) scoreToSubtract = t * 5;
+                    else if (s) scoreToSubtract = s * 10;
+                }
             }
             
+            if (scoreToSubtract === 0) scoreToSubtract = 10;
+            log.total = Math.max(0, log.total - scoreToSubtract);
             log.details.splice(index, 1);
-            
-            if(log.details.length === 0) {
+            if(log.details.length === 0 || log.total === 0) {
                 delete this.state.workoutLogs[date];
             }
         }
         
         localStorage.setItem('swm_logs', JSON.stringify(this.state.workoutLogs));
-        this.showToast("기록이 삭제되었습니다. 🗑️");
+        this.showToast("기록이 삭제되었습니다.");
         this.closeDeleteLog();
         this.renderCalendar(); 
         
