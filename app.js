@@ -34,7 +34,7 @@ const app = {
         currentOpenDate: null, 
         deleteTarget: null,
 
-        // 💡 새롭게 추가된 '기타 종목' 리스트! 로컬 스토리지에 자동 저장됩니다.
+        // 💡 새롭게 추가된 '기타 종목' 리스트 (이름과 횟수를 객체 형태로 저장 및 관리)
         customNames: JSON.parse(localStorage.getItem('swm_custom_names') || '[]'),
 
         images: JSON.parse(localStorage.getItem('swm_images') || '{"main":"","workout":"","finish":""}'),
@@ -120,18 +120,24 @@ const app = {
         this.showToast("구글 계정 연동이 해제되었습니다.");
     },
 
-    backupToCloud() {
-        if (!this.state.googleUser) { this.showToast("먼저 구글 계정으로 로그인해주세요."); return; }
-        if (this.config.gasWebAppUrl.includes("YOUR_GAS")) { this.showToast("GAS 웹 앱 URL이 설정되지 않았습니다."); return; }
+    backupToCloud(isAuto = false) {
+        if (!this.state.googleUser) { 
+            if(!isAuto) this.showToast("먼저 구글 계정으로 로그인해주세요."); 
+            return; 
+        }
+        if (this.config.gasWebAppUrl.includes("YOUR_GAS")) { 
+            if(!isAuto) this.showToast("GAS 웹 앱 URL이 설정되지 않았습니다."); 
+            return; 
+        }
 
         const cloudData = {
             streak: this.state.streak, lastDate: this.state.lastDate, sets: this.state.sets, reps: this.state.reps, rest: this.state.rest,
             workoutLogs: this.state.workoutLogs, oshiName: this.state.oshiName, sensorSensitivity: this.state.sensorSensitivity, 
             colors: this.state.colors, palette: this.state.palette, quotes: this.state.quotes,
-            customNames: this.state.customNames // 💡 클라우드 백업에 새 기록 종목도 포함시킵니다.
+            customNames: this.state.customNames
         };
 
-        this.showToast("☁️ 클라우드에 백업 중...");
+        if(!isAuto) this.showToast("☁️ 클라우드에 백업 중...");
         fetch(this.config.gasWebAppUrl, {
             method: 'POST', 
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -139,9 +145,14 @@ const app = {
         })
         .then(res => res.json())
         .then(data => {
-            if(data.status === 'success') this.showToast("✅ 클라우드 백업 완료!");
-            else this.showToast("❌ 백업 실패: " + data.message);
-        }).catch(err => { this.showToast("❌ 백업 중 서버 오류가 발생했습니다."); console.error(err); });
+            if(!isAuto) {
+                if(data.status === 'success') this.showToast("✅ 클라우드 백업 완료!");
+                else this.showToast("❌ 백업 실패: " + data.message);
+            }
+        }).catch(err => { 
+            if(!isAuto) this.showToast("❌ 백업 중 서버 오류가 발생했습니다."); 
+            console.error(err); 
+        });
     },
 
     restoreFromCloud() {
@@ -170,7 +181,7 @@ const app = {
         this.state.workoutLogs = loaded.workoutLogs || {}; this.state.oshiName = loaded.oshiName || 'ME!';
         this.state.sensorSensitivity = loaded.sensorSensitivity || 5; this.state.colors = loaded.colors || this.state.colors;
         this.state.palette = loaded.palette || []; this.state.quotes = loaded.quotes || this.state.quotes;
-        this.state.customNames = loaded.customNames || []; // 복구에도 포함!
+        this.state.customNames = loaded.customNames || []; 
 
         localStorage.setItem('swm_streak', this.state.streak); localStorage.setItem('swm_last_date', this.state.lastDate);
         localStorage.setItem('swm_logs', JSON.stringify(this.state.workoutLogs)); localStorage.setItem('swm_oshi_name', this.state.oshiName);
@@ -196,7 +207,6 @@ const app = {
             document.getElementById('cal-detail-box').classList.add('hidden');
             this.renderCalendar();
         } else if (id === 'custom-record-modal') {
-            // 커스텀 기록 모달을 열 때마다 필드를 초기화하고, 드롭박스 이력을 최신화합니다.
             this.renderCustomHistory();
             document.getElementById('custom-name').value = '';
             document.getElementById('custom-reps').value = '';
@@ -908,47 +918,52 @@ const app = {
         localStorage.setItem('swm_logs', JSON.stringify(this.state.workoutLogs));
     },
 
-    // 💡 새롭게 추가한: 기타 운동 기록 저장 함수
+    // 💡 기타 운동 기록 저장 및 횟수(count) 증가 로직 반영
     saveCustomRecord() {
         const nameInput = document.getElementById('custom-name').value.trim();
         const reps = document.getElementById('custom-reps').value;
         const sets = document.getElementById('custom-sets').value;
         const time = document.getElementById('custom-time').value;
 
-        // 필수 조건 1: 종목 이름 유무 검증
         if (!nameInput) {
             this.showToast("종목 이름을 입력해주세요! 💦");
             return;
         }
 
-        // 필수 조건 2: 세 항목 중 최소 1개 입력 검증
         if (!reps && !sets && !time) {
             this.showToast("횟수, 세트, 시간 중 최소 1개는 입력해주세요! 💦");
             return;
         }
 
-        // 종목 이력 저장 (최신 순 배열 상단 추가)
-        if (!this.state.customNames.includes(nameInput)) {
-            this.state.customNames.unshift(nameInput);
-            if (this.state.customNames.length > 30) this.state.customNames.pop(); // 너무 길어지지 않게 관리
-            localStorage.setItem('swm_custom_names', JSON.stringify(this.state.customNames));
-        }
+        // 호환성 처리 (이전 문자열 데이터를 객체로 변환)
+        this.state.customNames = this.state.customNames.map(item => {
+            return typeof item === 'string' ? { name: item, count: 1 } : item;
+        });
 
-        // 디테일 기록용 문자열 생성
+        // 사용한 종목 횟수 1 증가시키거나 새로 추가
+        const existingItem = this.state.customNames.find(item => item.name === nameInput);
+        if (existingItem) {
+            existingItem.count += 1;
+        } else {
+            this.state.customNames.push({ name: nameInput, count: 1 });
+        }
+        
+        // 저장은 여기서 한 번 진행하고, 정렬은 모달을 열거나 다시 그릴 때 처리됩니다.
+        localStorage.setItem('swm_custom_names', JSON.stringify(this.state.customNames));
+
         let detailParts = [];
         if (reps) detailParts.push(`${reps}회`);
         if (sets) detailParts.push(`${sets}세트`);
         if (time) detailParts.push(`${time}분`);
         const detailStr = `${nameInput} / ${detailParts.join(' ')}`;
 
-        // 잔디 채색을 위한 가상의 달력 총합 수치(Total) 산출
         let mockTotal = 0;
         if (reps && sets) mockTotal += parseInt(reps) * parseInt(sets);
         else if (reps) mockTotal += parseInt(reps);
-        else if (time) mockTotal += parseInt(time) * 5; // 분당 가상 운동량 5
+        else if (time) mockTotal += parseInt(time) * 5; 
         else if (sets) mockTotal += parseInt(sets) * 10;
         
-        if (mockTotal === 0) mockTotal = 10; // 최소 잔디 점수 부여
+        if (mockTotal === 0) mockTotal = 10; 
 
         const today = new Date();
         const y = today.getFullYear();
@@ -971,24 +986,34 @@ const app = {
 
         this.showToast("기타 운동 기록이 추가되었습니다! ✨");
         this.closeModal('custom-record-modal');
-        this.renderCalendar(); // 달력 즉시 갱신
+        this.renderCalendar(); 
         
         if (this.state.googleUser && this.config.gasWebAppUrl) {
             this.backupToCloud(true); 
         }
     },
 
-    // 💡 기타 운동 기록 - 드롭박스 렌더링 함수
+    // 💡 기타 운동 기록 - 드롭박스 렌더링 함수 (빈도순 정렬 및 최대 10개 표시)
     renderCustomHistory() {
+        this.state.customNames = this.state.customNames.map(item => {
+            return typeof item === 'string' ? { name: item, count: 1 } : item;
+        });
+        
+        this.state.customNames.sort((a, b) => b.count - a.count);
+        if (this.state.customNames.length > 10) {
+            this.state.customNames = this.state.customNames.slice(0, 10);
+        }
+        localStorage.setItem('swm_custom_names', JSON.stringify(this.state.customNames));
+
         const select = document.getElementById('custom-name-history');
         select.innerHTML = '';
         
         if (this.state.customNames.length === 0) {
             select.innerHTML = '<option value="">-이전 기록 없음-</option>';
         } else {
-            select.innerHTML = '<option value="">-최근 종목 선택-</option>';
-            this.state.customNames.forEach(name => {
-                select.innerHTML += `<option value="${name}">${name}</option>`;
+            select.innerHTML = '<option value="">-자주 쓰는 종목-</option>';
+            this.state.customNames.forEach((item, index) => {
+                select.innerHTML += `<option value="${index}">${item.name}</option>`;
             });
         }
     },
@@ -996,9 +1021,29 @@ const app = {
     // 💡 기타 운동 기록 - 드롭박스 선택 시 인풋창에 자동 입력
     selectCustomHistory() {
         const select = document.getElementById('custom-name-history');
-        if (select.value) {
-            document.getElementById('custom-name').value = select.value;
+        if (select.value !== "") {
+            const index = parseInt(select.value);
+            document.getElementById('custom-name').value = this.state.customNames[index].name;
+        } else {
+            document.getElementById('custom-name').value = '';
         }
+    },
+
+    // 💡 선택한 이전 기록 삭제 기능
+    deleteSelectedHistory() {
+        const select = document.getElementById('custom-name-history');
+        if (select.value === "") {
+            this.showToast("삭제할 종목을 드롭박스에서 먼저 선택해주세요! 💡");
+            return;
+        }
+        
+        const index = parseInt(select.value);
+        this.state.customNames.splice(index, 1);
+        localStorage.setItem('swm_custom_names', JSON.stringify(this.state.customNames));
+        
+        document.getElementById('custom-name').value = '';
+        this.renderCustomHistory();
+        this.showToast("선택한 종목이 깔끔하게 삭제되었습니다! 🐛");
     },
 
     changeMonth(offset) {
@@ -1050,7 +1095,7 @@ const app = {
         this.state.deleteTarget = null;
     },
 
-confirmDeleteLog() {
+    confirmDeleteLog() {
         if (!this.state.deleteTarget) return;
         const { date, index } = this.state.deleteTarget;
         let log = this.state.workoutLogs[date];
