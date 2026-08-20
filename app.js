@@ -989,8 +989,14 @@ const app = {
         }
     },
 
-    // 💡 기타 운동 기록 - 드롭박스 렌더링 함수
+// 💡 기타 운동 기록 - 드롭박스 렌더링 함수 (오류 데이터 정제 기능 추가)
     renderCustomHistory() {
+        // 🐛 해결: 저장소에 꼬인 데이터([object Object])가 있다면 텍스트(문자열)만 남기도록 필터링합니다.
+        this.state.customNames = this.state.customNames.filter(name => typeof name === 'string' && name.trim() !== '' && name !== '[object Object]');
+        
+        // 정제된 깔끔한 상태를 저장소에 다시 덮어씌워 줍니다.
+        localStorage.setItem('swm_custom_names', JSON.stringify(this.state.customNames));
+
         const select = document.getElementById('custom-name-history');
         select.innerHTML = '';
         
