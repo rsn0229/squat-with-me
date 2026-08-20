@@ -908,58 +908,45 @@ const app = {
         localStorage.setItem('swm_logs', JSON.stringify(this.state.workoutLogs));
     },
 
-    // 💡 새롭게 추가한: 기타 운동 기록 저장 함수
-    // app.js 파일 내부의 saveCustomRecord() 함수를 찾아 아래 코드로 교체해 주세요 🙏
-
     saveCustomRecord() {
         const nameInput = document.getElementById('custom-name').value.trim();
         const reps = document.getElementById('custom-reps').value;
         const sets = document.getElementById('custom-sets').value;
         const time = document.getElementById('custom-time').value;
 
-        // 필수 조건 1: 종목 이름 유무 검증
         if (!nameInput) {
             this.showToast("종목 이름을 입력해주세요! 💦");
             return;
         }
-
-        // 필수 조건 2: 세 항목 중 최소 1개 입력 검증
         if (!reps && !sets && !time) {
             this.showToast("횟수, 세트, 시간 중 최소 1개는 입력해주세요! 💦");
             return;
         }
 
-        // 🐛 기존: 새 항목만 맨 앞에 추가하던 로직 수정
-        // 💡 변경: 이미 있는 종목이면 기존 위치에서 제거하여 최상단으로 갱신될 수 있게 함
         const existingIndex = this.state.customNames.indexOf(nameInput);
         if (existingIndex !== -1) {
             this.state.customNames.splice(existingIndex, 1);
         }
-
-        // 종목 이력 저장 (최신 사용된 항목을 항상 배열 상단 추가)
         this.state.customNames.unshift(nameInput);
         
-        // ✨ 너무 길어지지 않게 관리 (최대 10개까지만 노출 및 저장)
         if (this.state.customNames.length > 10) {
             this.state.customNames = this.state.customNames.slice(0, 10);
         }
         localStorage.setItem('swm_custom_names', JSON.stringify(this.state.customNames));
 
-        // 디테일 기록용 문자열 생성
         let detailParts = [];
         if (reps) detailParts.push(`${reps}회`);
         if (sets) detailParts.push(`${sets}세트`);
         if (time) detailParts.push(`${time}분`);
-        const detailStr = `${nameInput} / ${detailParts.join(' ')}`;
+        const detailStr = `${nameInput} / ${detailParts.join(' / ')}`;
 
-        // 잔디 채색을 위한 가상의 달력 총합 수치(Total) 산출
         let mockTotal = 0;
         if (reps && sets) mockTotal += parseInt(reps) * parseInt(sets);
         else if (reps) mockTotal += parseInt(reps);
-        else if (time) mockTotal += parseInt(time) * 5; // 분당 가상 운동량 5
+        else if (time) mockTotal += parseInt(time) * 5; 
         else if (sets) mockTotal += parseInt(sets) * 10;
         
-        if (mockTotal === 0) mockTotal = 10; // 최소 잔디 점수 부여
+        if (mockTotal === 0) mockTotal = 10; 
 
         const today = new Date();
         const y = today.getFullYear();
@@ -982,19 +969,16 @@ const app = {
 
         this.showToast("기타 운동 기록이 추가되었습니다! ✨");
         this.closeModal('custom-record-modal');
-        this.renderCalendar(); // 달력 즉시 갱신
+        this.renderCalendar(); 
         
         if (this.state.googleUser && this.config.gasWebAppUrl) {
             this.backupToCloud(true); 
         }
     },
 
-// 💡 기타 운동 기록 - 드롭박스 렌더링 함수 (오류 데이터 정제 기능 추가)
     renderCustomHistory() {
-        // 🐛 해결: 저장소에 꼬인 데이터([object Object])가 있다면 텍스트(문자열)만 남기도록 필터링합니다.
         this.state.customNames = this.state.customNames.filter(name => typeof name === 'string' && name.trim() !== '' && name !== '[object Object]');
-        
-        // 정제된 깔끔한 상태를 저장소에 다시 덮어씌워 줍니다.
+
         localStorage.setItem('swm_custom_names', JSON.stringify(this.state.customNames));
 
         const select = document.getElementById('custom-name-history');
@@ -1010,7 +994,6 @@ const app = {
         }
     },
 
-    // 💡 기타 운동 기록 - 드롭박스 선택 시 인풋창에 자동 입력
     selectCustomHistory() {
         const select = document.getElementById('custom-name-history');
         if (select.value) {
@@ -1083,10 +1066,9 @@ confirmDeleteLog() {
             if (oldMatch) {
                 scoreToSubtract = parseInt(oldMatch[1]) * parseInt(oldMatch[2]);
             } else {
-
                 const parts = detailStr.split(' / ');
                 if (parts.length > 1) {
-                    const info = parts[1];
+                    const info = parts.slice(1).join(' '); 
                     let r = 0, s = 0, t = 0;
                     
                     const rMatch = info.match(/(\d+)회/); if(rMatch) r = parseInt(rMatch[1]);
